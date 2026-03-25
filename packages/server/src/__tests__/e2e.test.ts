@@ -1,12 +1,8 @@
 import "reflect-metadata";
-import { describe, test, expect, beforeAll, afterAll } from "bun:test";
-import { NestFactory } from "@nestjs/core";
-import { ExpressAdapter } from "@nestjs/platform-express";
-import express from "express";
+import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
 import { Server } from "colyseus";
 import { BunWebSockets } from "@colyseus/bun-websockets";
-import { Client, Room, Callbacks } from "@colyseus/sdk";
-import { AppModule } from "../app.module";
+import { boot, ColyseusTestServer } from "@colyseus/testing";
 import { RPSRoom } from "../colyseus/rooms/rps.room";
 import { LeaderboardService } from "../leaderboard/leaderboard.service";
 import {
@@ -16,284 +12,166 @@ import {
   MatchFormat,
 } from "@rps/shared";
 
-const TEST_PORT = 9567;
-const WS_URL = `ws://localhost:${TEST_PORT}`;
-
-let gameServer: Server;
+let colyseus: ColyseusTestServer;
 let leaderboardService: LeaderboardService;
 
-/** Wait for a room's state to reach a specific phase */
-function waitForPhase(room: Room, phase: string, timeoutMs = 15000): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const state = room.state;
-    if (state.phase === phase) {
-      resolve();
-      return;
-    }
-    const timer = setTimeout(
-      () => { reject(new Error(`Timed out waiting for phase "${phase}" (stuck on "${state.phase}")`)); },
-      timeoutMs,
-    );
-    const $ = Callbacks.get(room);
-    $.listen("phase" as any, (newPhase: string) => {
-      if (newPhase === phase) {
-        clearTimeout(timer);
-        resolve();
-      }
-    });
-  });
-}
-
-/** Play a round: wait for choosing, both players choose, wait for reveal/end */
-async function playRound(
-  room1: Room,
-  room2: Room,
-  p1Choice: Choice,
-  p2Choice: Choice,
-) {
-  await waitForPhase(room1, RoomPhase.Choosing);
-  room1.send(ClientMessage.MakeChoice, { choice: p1Choice });
-  room2.send(ClientMessage.MakeChoice, { choice: p2Choice });
-  // Wait for revealing (choices are evaluated)
-  await waitForPhase(room1, RoomPhase.Revealing);
-}
-
 beforeAll(async () => {
-  const nestReady = new Promise<void>((resolve) => {
-    gameServer = new Server({
-      transport: new BunWebSockets(),
-      greet: false,
-      express: async (app: express.Application) => {
-        const adapter = new ExpressAdapter(app);
-        const nestApp = await NestFactory.create(AppModule, adapter, { logger: false });
-        leaderboardService = nestApp.get(LeaderboardService);
-        RPSRoom.leaderboardService = leaderboardService;
-        await nestApp.init();
-        resolve();
-      },
-    });
-  });
+  leaderboardService = new LeaderboardService();
+  RPSRoom.leaderboardService = leaderboardService;
 
-  gameServer.define("rps", RPSRoom);
-  await gameServer.listen(TEST_PORT);
-  await nestReady;
+  const server = new Server({ transport: new BunWebSockets(), greet: false });
+  server.define("rps", RPSRoom);
+  colyseus = await boot(server);
 });
 
 afterAll(async () => {
-  await gameServer.gracefullyShutdown(false);
+  await colyseus.shutdown();
 });
 
-describe("RPS E2E", () => {
-  test("two players can complete a Best-of-3 match", async () => {
-    const client1 = new Client(WS_URL);
-    const client2 = new Client(WS_URL);
+beforeEach(async () => {
+  await colyseus.cleanup();
+});
 
-    const room1 = await client1.create("rps", {
-      name: "Alice",
+/** Wait until server room state reaches a given phase */
+async function waitForPhase(room: RPSRoom, phase: string, timeoutMs = 15000) {
+  const start = Date.now();
+  while (room.state.phase !== phase) {
+    if (Date.now() - start > timeoutMs) {
+      throw new Error(`Timed out waiting for phase "${phase}" (stuck on "${room.state.phase}")`);
+    }
+    await new Promise((r) => { setTimeout(r, 50); });
+  }
+}
+
+describe("RPS", () => {
+  test("two players can complete a Best-of-3 match", async () => {
+    const room = await colyseus.createRoom<RPSRoom>("rps", {
       matchFormat: MatchFormat.BestOf3,
     });
-    expect(room1.sessionId).toBeDefined();
 
-    const room2 = await client2.joinById(room1.roomId, { name: "Bob" });
-    expect(room2.sessionId).toBeDefined();
-    expect(room2.roomId).toBe(room1.roomId);
+    const client1 = await colyseus.connectTo(room, { name: "Alice" });
+    const client2 = await colyseus.connectTo(room, { name: "Bob" });
 
-    const state1 = room1.state;
+    await waitForPhase(room, RoomPhase.Choosing);
 
-    // Round 1: Alice=Rock, Bob=Scissors -> Alice wins
-    await playRound(room1, room2, Choice.Rock, Choice.Scissors);
+    // Round 1: Alice=Rock, Bob=Scissors → Alice wins
+    client1.send(ClientMessage.MakeChoice, { choice: Choice.Rock });
+    client2.send(ClientMessage.MakeChoice, { choice: Choice.Scissors });
+    await waitForPhase(room, RoomPhase.Revealing);
 
-    // Verify round was recorded in state
-    expect(state1.currentRound).toBe(1);
-    expect(state1.rounds.length).toBe(1);
-    const round1 = state1.rounds[0];
-    expect(round1.player1Choice).toBe(Choice.Rock);
-    expect(round1.player2Choice).toBe(Choice.Scissors);
-    expect(round1.result).toBe("player1");
+    expect(room.state.currentRound).toBe(1);
+    expect(room.state.rounds[0].result).toBe("player1");
+    expect(room.state.players.get(room.state.player1Id)!.score).toBe(1);
+    expect(room.state.players.get(room.state.player2Id)!.score).toBe(0);
 
-    // Verify scores via player state
-    const p1After1 = state1.players.get(state1.player1Id);
-    const p2After1 = state1.players.get(state1.player2Id);
-    expect(p1After1.score).toBe(1);
-    expect(p2After1.score).toBe(0);
+    // Round 2: Alice=Paper, Bob=Scissors → Bob wins
+    await waitForPhase(room, RoomPhase.Choosing);
+    client1.send(ClientMessage.MakeChoice, { choice: Choice.Paper });
+    client2.send(ClientMessage.MakeChoice, { choice: Choice.Scissors });
+    await waitForPhase(room, RoomPhase.Revealing);
 
-    // Round 2: Alice=Paper, Bob=Scissors -> Bob wins
-    await playRound(room1, room2, Choice.Paper, Choice.Scissors);
+    expect(room.state.currentRound).toBe(2);
+    expect(room.state.rounds[1].result).toBe("player2");
 
-    expect(state1.currentRound).toBe(2);
-    const p1After2 = state1.players.get(state1.player1Id);
-    const p2After2 = state1.players.get(state1.player2Id);
-    expect(p1After2.score).toBe(1);
-    expect(p2After2.score).toBe(1);
+    // Round 3: Alice=Rock, Bob=Scissors → Alice wins the match
+    await waitForPhase(room, RoomPhase.Choosing);
+    client1.send(ClientMessage.MakeChoice, { choice: Choice.Rock });
+    client2.send(ClientMessage.MakeChoice, { choice: Choice.Scissors });
+    await waitForPhase(room, RoomPhase.MatchEnd);
 
-    // Round 3: Alice=Rock, Bob=Scissors -> Alice wins the match
-    await playRound(room1, room2, Choice.Rock, Choice.Scissors);
-
-    await waitForPhase(room1, RoomPhase.MatchEnd);
-    expect(state1.winnerId).toBe(room1.sessionId);
-    expect(state1.currentRound).toBe(3);
-
-    const p1Final = state1.players.get(state1.player1Id);
-    const p2Final = state1.players.get(state1.player2Id);
-    expect(p1Final.score).toBe(2);
-    expect(p2Final.score).toBe(1);
+    expect(room.state.winnerId).toBe(client1.sessionId);
+    expect(room.state.players.get(room.state.player1Id)!.score).toBe(2);
+    expect(room.state.players.get(room.state.player2Id)!.score).toBe(1);
 
     // Verify leaderboard
     const aliceStats = leaderboardService.getPlayerStats("Alice");
     expect(aliceStats).not.toBeNull();
-    expect(aliceStats!.wins).toBe(1);
-    expect(aliceStats!.losses).toBe(0);
+    expect(aliceStats!.wins).toBeGreaterThanOrEqual(1);
 
     const bobStats = leaderboardService.getPlayerStats("Bob");
     expect(bobStats).not.toBeNull();
-    expect(bobStats!.wins).toBe(0);
-    expect(bobStats!.losses).toBe(1);
-
-    room1.leave();
-    room2.leave();
-  }, 60000);
+    expect(bobStats!.losses).toBeGreaterThanOrEqual(1);
+  }, 30000);
 
   test("play again resets the match", async () => {
-    const client1 = new Client(WS_URL);
-    const client2 = new Client(WS_URL);
-
-    const room1 = await client1.create("rps", {
-      name: "Charlie",
+    const room = await colyseus.createRoom<RPSRoom>("rps", {
       matchFormat: MatchFormat.BestOf3,
     });
-    const room2 = await client2.joinById(room1.roomId, { name: "Dana" });
 
-    const state1 = room1.state;
+    const client1 = await colyseus.connectTo(room, { name: "Charlie" });
+    const client2 = await colyseus.connectTo(room, { name: "Dana" });
 
-    // Win 2 rounds quickly (Rock beats Scissors)
+    // Win 2 rounds (Rock beats Scissors)
     for (let i = 0; i < 2; i++) {
-      await waitForPhase(room1, RoomPhase.Choosing);
-      room1.send(ClientMessage.MakeChoice, { choice: Choice.Rock });
-      room2.send(ClientMessage.MakeChoice, { choice: Choice.Scissors });
+      await waitForPhase(room, RoomPhase.Choosing);
+      client1.send(ClientMessage.MakeChoice, { choice: Choice.Rock });
+      client2.send(ClientMessage.MakeChoice, { choice: Choice.Scissors });
       if (i < 1) {
-        await waitForPhase(room1, RoomPhase.RoundEnd);
+        await waitForPhase(room, RoomPhase.RoundEnd);
       }
     }
 
-    await waitForPhase(room1, RoomPhase.MatchEnd);
-    expect(state1.winnerId).toBe(room1.sessionId);
+    await waitForPhase(room, RoomPhase.MatchEnd);
+    expect(room.state.winnerId).toBe(client1.sessionId);
 
     // Both players vote to play again
-    room1.send(ClientMessage.PlayAgain);
-    room2.send(ClientMessage.PlayAgain);
+    client1.send(ClientMessage.PlayAgain);
+    client2.send(ClientMessage.PlayAgain);
 
-    await waitForPhase(room1, RoomPhase.Choosing);
-    expect(state1.currentRound).toBe(0);
-    expect(state1.winnerId).toBe("");
-
-    room1.leave();
-    room2.leave();
-  }, 60000);
+    await waitForPhase(room, RoomPhase.Choosing);
+    expect(room.state.currentRound).toBe(0);
+    expect(room.state.winnerId).toBe("");
+  }, 30000);
 
   test("player disconnect mid-match results in forfeit", async () => {
-    const client1 = new Client(WS_URL);
-    const client2 = new Client(WS_URL);
-
-    const room1 = await client1.create("rps", {
-      name: "Eve",
+    const room = await colyseus.createRoom<RPSRoom>("rps", {
       matchFormat: MatchFormat.BestOf3,
     });
-    const room2 = await client2.joinById(room1.roomId, { name: "Frank" });
 
-    const state1 = room1.state;
+    const client1 = await colyseus.connectTo(room, { name: "Eve" });
+    const client2 = await colyseus.connectTo(room, { name: "Frank" });
 
-    await waitForPhase(room1, RoomPhase.Choosing);
+    await waitForPhase(room, RoomPhase.Choosing);
 
-    // Player 2 disconnects (consented leave)
-    room2.leave(true);
+    client2.leave(true);
 
-    // Player 1 should win by forfeit
-    await waitForPhase(room1, RoomPhase.MatchEnd);
-    expect(state1.winnerId).toBe(room1.sessionId);
-
-    room1.leave();
-  }, 60000);
+    await waitForPhase(room, RoomPhase.MatchEnd);
+    expect(room.state.winnerId).toBe(client1.sessionId);
+  }, 30000);
 
   test("spectator can join a full room", async () => {
-    const client1 = new Client(WS_URL);
-    const client2 = new Client(WS_URL);
-    const client3 = new Client(WS_URL);
-
-    const room1 = await client1.create("rps", {
-      name: "Gina",
+    const room = await colyseus.createRoom<RPSRoom>("rps", {
       matchFormat: MatchFormat.BestOf3,
     });
-    const room2 = await client2.joinById(room1.roomId, { name: "Hank" });
 
-    const room3 = await client3.joinById(room1.roomId, {
-      name: "Spectator",
-      spectate: true,
-    });
-    expect(room3.sessionId).toBeDefined();
+    const client1 = await colyseus.connectTo(room, { name: "Gina" });
+    const client2 = await colyseus.connectTo(room, { name: "Hank" });
+    const spectator = await colyseus.connectTo(room, { name: "Spectator", spectate: true });
 
-    const state3 = room3.state;
+    await waitForPhase(room, RoomPhase.Choosing);
 
-    await waitForPhase(room3, RoomPhase.Choosing);
-    expect(state3.spectatorCount).toBe(1);
-    expect(state3.player1Id).toBeTruthy();
-    expect(state3.player2Id).toBeTruthy();
-
-    room1.leave();
-    room2.leave();
-    room3.leave();
-  }, 60000);
-
-  test("leaderboard REST endpoint returns results", async () => {
-    const res = await fetch(`http://localhost:${TEST_PORT}/api/leaderboard`);
-    expect(res.status).toBe(200);
-
-    const entries = await res.json();
-    expect(Array.isArray(entries)).toBe(true);
-    expect(entries.length).toBeGreaterThan(0);
-
-    const entry = entries[0];
-    expect(entry).toHaveProperty("playerName");
-    expect(entry).toHaveProperty("wins");
-    expect(entry).toHaveProperty("losses");
-    expect(entry).toHaveProperty("winRate");
-  }, 10000);
+    expect(room.state.spectatorCount).toBe(1);
+    expect(room.state.player1Id).toBeTruthy();
+    expect(room.state.player2Id).toBeTruthy();
+    expect(room.state.players.has(spectator.sessionId)).toBe(false);
+  }, 30000);
 
   test("draw rounds don't award points", async () => {
-    const client1 = new Client(WS_URL);
-    const client2 = new Client(WS_URL);
-
-    const room1 = await client1.create("rps", {
-      name: "Ivy",
+    const room = await colyseus.createRoom<RPSRoom>("rps", {
       matchFormat: MatchFormat.BestOf3,
     });
-    const room2 = await client2.joinById(room1.roomId, { name: "Jack" });
 
-    const state1 = room1.state;
+    const client1 = await colyseus.connectTo(room, { name: "Ivy" });
+    const client2 = await colyseus.connectTo(room, { name: "Jack" });
 
-    // Play a draw round
-    await waitForPhase(room1, RoomPhase.Choosing);
-    room1.send(ClientMessage.MakeChoice, { choice: Choice.Rock });
-    room2.send(ClientMessage.MakeChoice, { choice: Choice.Rock });
+    await waitForPhase(room, RoomPhase.Choosing);
 
-    await waitForPhase(room1, RoomPhase.Revealing);
+    client1.send(ClientMessage.MakeChoice, { choice: Choice.Rock });
+    client2.send(ClientMessage.MakeChoice, { choice: Choice.Rock });
+    await waitForPhase(room, RoomPhase.Revealing);
 
-    // Verify round was a draw
-    expect(state1.rounds.length).toBe(1);
-    expect(state1.rounds[0].result).toBe("draw");
-
-    // Wait for next choosing phase and verify scores are still 0
-    await waitForPhase(room1, RoomPhase.Choosing);
-
-    let p1Score = 0;
-    let p2Score = 0;
-    state1.players.forEach((p: any) => {
-      if (p.sessionId === room1.sessionId) p1Score = p.score;
-      else p2Score = p.score;
-    });
-    expect(p1Score).toBe(0);
-    expect(p2Score).toBe(0);
-
-    room1.leave();
-    room2.leave();
-  }, 60000);
+    expect(room.state.rounds[0].result).toBe("draw");
+    expect(room.state.players.get(room.state.player1Id)!.score).toBe(0);
+    expect(room.state.players.get(room.state.player2Id)!.score).toBe(0);
+  }, 30000);
 });

@@ -66,7 +66,7 @@ export class RPSRoom extends Room<RPSRoomState> {
   }
 
   async onLeave(client: Client, code?: number) {
-    const consented = code !== undefined && code >= 1000 && code <= 1015;
+    const consented = code === 4000;
     if (this.spectators.has(client.sessionId)) {
       this.spectators.delete(client.sessionId);
       this.state.spectatorCount--;
