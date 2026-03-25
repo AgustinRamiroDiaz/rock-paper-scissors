@@ -1,4 +1,6 @@
 import tseslint from "typescript-eslint";
+import pluginVue from "eslint-plugin-vue";
+import vueParser from "vue-eslint-parser";
 
 export default tseslint.config(
   {
@@ -17,6 +19,7 @@ export default tseslint.config(
       parserOptions: {
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
+        extraFileExtensions: [".vue"],
       },
     },
     rules: {
@@ -35,7 +38,7 @@ export default tseslint.config(
         { allowNumber: true, allowBoolean: true },
       ],
 
-      // Relaxed for game dev patterns (Phaser callbacks, Colyseus handlers)
+      // Relaxed for Colyseus untyped state access
       "@typescript-eslint/no-unsafe-argument": "warn",
       "@typescript-eslint/no-unsafe-assignment": "warn",
       "@typescript-eslint/no-unsafe-call": "warn",
@@ -44,6 +47,29 @@ export default tseslint.config(
 
       // NestJS uses empty classes for modules
       "@typescript-eslint/no-extraneous-class": "off",
+    },
+  },
+  // Vue files
+  {
+    files: ["**/*.vue"],
+    languageOptions: {
+      parser: vueParser,
+      parserOptions: {
+        parser: tseslint.parser,
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+        extraFileExtensions: [".vue"],
+      },
+    },
+    plugins: {
+      vue: pluginVue,
+    },
+    rules: {
+      "vue/multi-word-component-names": "off",
+      "vue/comment-directive": "off",
+      // Colyseus state access patterns
+      "@typescript-eslint/no-unsafe-enum-comparison": "off",
+      "@typescript-eslint/no-unnecessary-condition": "off",
     },
   },
   {

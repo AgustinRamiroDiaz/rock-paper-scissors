@@ -4,8 +4,9 @@
     "outDir": "dist",
     "rootDir": "src",
     "experimentalDecorators": false,
-    "emitDecoratorMetadata": false
+    "emitDecoratorMetadata": false,
+    "jsx": "preserve"
   },
-  "include": ["src"],
+  "include": ["src/**/*.ts", "src/**/*.vue"],
   "references": [{ "path": "../shared" }]
 }
