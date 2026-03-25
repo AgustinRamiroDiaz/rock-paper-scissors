@@ -11,8 +11,9 @@
         maxlength="16"
         class="input"
         :class="{ error: showError }"
+        data-testid="name-input"
       />
-      <button type="submit" class="btn btn-primary">PLAY</button>
+      <button type="submit" class="btn btn-primary" data-testid="play-btn">PLAY</button>
     </form>
   </div>
 </template>

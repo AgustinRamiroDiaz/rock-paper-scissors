@@ -9,7 +9,7 @@
       <p v-if="loading" class="status">Loading rooms...</p>
       <p v-else-if="rooms.length === 0" class="status">No rooms available. Create one!</p>
 
-      <div v-for="room in rooms" :key="room.roomId" class="room-row">
+      <div v-for="room in rooms" :key="room.roomId" class="room-row" :data-testid="`room-${room.roomId}`">
         <span class="room-info">
           {{ room.metadata?.roomName ?? "RPS Game" }}
           [{{ room.metadata?.matchFormat === 5 ? "Bo5" : "Bo3" }}]
@@ -20,6 +20,7 @@
         <button
           class="btn btn-small"
           :class="room.clients >= 2 ? 'btn-spectate' : 'btn-join'"
+          :data-testid="room.clients >= 2 ? 'spectate-btn' : 'join-btn'"
           @click="joinRoom(room.roomId, room.clients >= 2)"
         >
           {{ room.clients >= 2 ? "SPECTATE" : "JOIN" }}
@@ -31,14 +32,14 @@
     <div v-if="showCreatePanel" class="overlay" @click.self="showCreatePanel = false">
       <div class="panel">
         <h2 class="panel-title">CREATE ROOM</h2>
-        <button class="btn btn-format" @click="createRoom(3)">Best of 3</button>
-        <button class="btn btn-format" @click="createRoom(5)">Best of 5</button>
+        <button class="btn btn-format" data-testid="bo3-btn" @click="createRoom(3)">Best of 3</button>
+        <button class="btn btn-format" data-testid="bo5-btn" @click="createRoom(5)">Best of 5</button>
         <button class="btn-link" @click="showCreatePanel = false">Cancel</button>
       </div>
     </div>
 
     <div class="actions">
-      <button class="btn btn-primary" @click="showCreatePanel = true">CREATE ROOM</button>
+      <button class="btn btn-primary" data-testid="create-room-btn" @click="showCreatePanel = true">CREATE ROOM</button>
       <button class="btn btn-secondary" @click="void refreshRooms()">REFRESH</button>
       <button class="btn btn-dark" @click="$router.push('/leaderboard')">LEADERBOARD</button>
     </div>

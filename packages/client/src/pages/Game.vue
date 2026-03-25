@@ -19,7 +19,7 @@
     <div v-if="banner" class="banner">{{ banner }}</div>
 
     <!-- Main area -->
-    <div class="main-area">
+    <div class="main-area" :data-testid="`phase-${phase}`">
       <!-- Waiting -->
       <p v-if="phase === 'waiting'" class="phase-text">Waiting for opponent...</p>
 
@@ -35,6 +35,7 @@
             class="choice-btn"
             :class="[c.class, { dimmed: hasChosen && chosenValue !== c.value }]"
             :disabled="hasChosen"
+            :data-testid="`choice-${c.value}`"
             @click="makeChoice(c.value)"
           >
             <span class="choice-icon">{{ c.icon }}</span>
@@ -62,9 +63,9 @@
       </div>
 
       <!-- Match end -->
-      <div v-else-if="phase === 'match_end'" class="match-end">
-        <h2 :class="['match-result', matchResultClass]">{{ matchResultText }}</h2>
-        <p class="final-score">{{ p1Name }} {{ p1Score }} - {{ p2Score }} {{ p2Name }}</p>
+      <div v-else-if="phase === 'match_end'" class="match-end" data-testid="match-end">
+        <h2 :class="['match-result', matchResultClass]" data-testid="match-result">{{ matchResultText }}</h2>
+        <p class="final-score" data-testid="final-score">{{ p1Name }} {{ p1Score }} - {{ p2Score }} {{ p2Name }}</p>
         <div v-if="!spectating" class="match-actions">
           <button class="btn btn-green" :disabled="playAgainSent" @click="playAgain">
             {{ playAgainSent ? "WAITING..." : "PLAY AGAIN" }}
