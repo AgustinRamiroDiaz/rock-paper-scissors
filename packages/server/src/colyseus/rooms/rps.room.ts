@@ -1,10 +1,9 @@
-import { Room, type Client, type Delayed } from "colyseus";
+import { Room, type Client } from "colyseus";
 import { RPSRoomState, PlayerSchema, RoundSchema } from "../schemas/rps.state";
 import {
   Choice,
   RoomPhase,
   CHOICE_BEATS,
-  COUNTDOWN_SECONDS,
   REVEAL_DURATION_MS,
   ROUND_END_DURATION_MS,
   RECONNECT_TIMEOUT_MS,
@@ -20,8 +19,6 @@ export class RPSRoom extends Room<RPSRoomState> {
   private pendingChoices = new Map<string, Choice>();
   private playerSlots: string[] = [];
   private spectators = new Set<string>();
-  private reconnectionTimers = new Map<string, Delayed>();
-  private countdownInterval: Delayed | null = null;
   private playAgainVotes = new Set<string>();
 
   onCreate(options: { name?: string; matchFormat?: number }) {
@@ -64,7 +61,7 @@ export class RPSRoom extends Room<RPSRoomState> {
       this.state.player1Id = client.sessionId;
     } else if (this.playerSlots.length === 2) {
       this.state.player2Id = client.sessionId;
-      this.startCountdown();
+      this.startChoosing();
     }
   }
 
@@ -141,7 +138,6 @@ export class RPSRoom extends Room<RPSRoomState> {
 
     // If no players left (only spectators), reset to waiting
     if (this.playerSlots.length === 0) {
-      this.clearCountdown();
       this.state.phase = RoomPhase.WaitingForPlayers;
     }
   }
@@ -183,7 +179,7 @@ export class RPSRoom extends Room<RPSRoomState> {
     // Both players want to play again
     if (this.playAgainVotes.size === 2) {
       this.resetMatch();
-      this.startCountdown();
+      this.startChoosing();
     }
   }
 
@@ -195,25 +191,9 @@ export class RPSRoom extends Room<RPSRoomState> {
     }
   }
 
-  private startCountdown() {
-    this.state.phase = RoomPhase.Countdown;
-    this.state.countdownRemaining = COUNTDOWN_SECONDS;
-
-    this.countdownInterval = this.clock.setInterval(() => {
-      this.state.countdownRemaining--;
-      if (this.state.countdownRemaining <= 0) {
-        this.clearCountdown();
-        this.state.phase = RoomPhase.Choosing;
-        this.resetPlayerChoiceState();
-      }
-    }, 1000);
-  }
-
-  private clearCountdown() {
-    if (this.countdownInterval) {
-      this.countdownInterval.clear();
-      this.countdownInterval = null;
-    }
+  private startChoosing() {
+    this.state.phase = RoomPhase.Choosing;
+    this.resetPlayerChoiceState();
   }
 
   private evaluateRound() {
@@ -296,8 +276,7 @@ export class RPSRoom extends Room<RPSRoomState> {
       this.state.phase = RoomPhase.RoundEnd;
       this.clock.setTimeout(() => {
         this.pendingChoices.clear();
-        this.resetPlayerChoiceState();
-        this.startCountdown();
+        this.startChoosing();
       }, ROUND_END_DURATION_MS);
     }
   }

@@ -17,7 +17,6 @@ export enum MatchFormat {
 
 export enum RoomPhase {
   WaitingForPlayers = "waiting",
-  Countdown = "countdown",
   Choosing = "choosing",
   Revealing = "revealing",
   RoundEnd = "round_end",
@@ -30,7 +29,6 @@ export const CHOICE_BEATS: Record<Choice, Choice> = {
   [Choice.Scissors]: Choice.Paper,
 };
 
-export const COUNTDOWN_SECONDS = 3;
 export const REVEAL_DURATION_MS = 2000;
 export const ROUND_END_DURATION_MS = 2500;
 export const RECONNECT_TIMEOUT_MS = 30000;

@@ -23,7 +23,6 @@ export class RPSRoomState extends Schema {
   @type("string") phase: string = "waiting";
   @type("number") matchFormat: number = 3;
   @type("number") currentRound: number = 0;
-  @type("number") countdownRemaining: number = 0;
   @type("string") player1Id: string = "";
   @type("string") player2Id: string = "";
   @type("string") winnerId: string = "";

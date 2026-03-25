@@ -23,12 +23,6 @@
       <!-- Waiting -->
       <p v-if="phase === 'waiting'" class="phase-text">Waiting for opponent...</p>
 
-      <!-- Countdown -->
-      <div v-else-if="phase === 'countdown'" class="countdown-area">
-        <p class="phase-text">Get ready!</p>
-        <span class="countdown">{{ countdown }}</span>
-      </div>
-
       <!-- Choosing -->
       <div v-else-if="phase === 'choosing'" class="choosing-area">
         <p class="phase-text">
@@ -101,7 +95,6 @@ const route = useRoute();
 const spectating = route.query.spectating === "1";
 
 const phase = ref("waiting");
-const countdown = ref(0);
 const currentRound = ref(0);
 const matchFormat = ref(3);
 const p1Name = ref("Waiting...");
@@ -195,14 +188,13 @@ onMounted(() => {
   cleanups.push(
     $.listen("phase" as never, (val: string) => {
       phase.value = val;
-      if (val === RoomPhase.Choosing || val === RoomPhase.Countdown) {
+      if (val === RoomPhase.Choosing) {
         hasChosen.value = false;
         chosenValue.value = "";
         playAgainSent.value = false;
       }
     }),
-    $.listen("countdownRemaining" as never, (val: number) => { countdown.value = val; }),
-    $.listen("currentRound" as never, (val: number) => { currentRound.value = val; }),
+$.listen("currentRound" as never, (val: number) => { currentRound.value = val; }),
     $.listen("matchFormat" as never, (val: number) => { matchFormat.value = val; }),
     $.listen("spectatorCount" as never, (val: number) => { spectatorCount.value = val; }),
     $.listen("winnerId" as never, (val: string) => { winnerId.value = val; }),
@@ -311,12 +303,6 @@ function updatePlayers(state: Record<string, unknown>) {
 .phase-text {
   font-size: 24px;
   color: #ccc;
-}
-
-.countdown {
-  font-size: 96px;
-  font-weight: bold;
-  color: #e94560;
 }
 
 .choices {

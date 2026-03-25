@@ -182,7 +182,7 @@ describe("RPS E2E", () => {
     room1.send(ClientMessage.PlayAgain);
     room2.send(ClientMessage.PlayAgain);
 
-    await waitForPhase(room1, RoomPhase.Countdown);
+    await waitForPhase(room1, RoomPhase.Choosing);
     expect(state1.currentRound).toBe(0);
     expect(state1.winnerId).toBe("");
 
