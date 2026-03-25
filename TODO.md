@@ -1,5 +1,4 @@
 - Deploy backend in Vercel and frontend in Github Pages
 - load testing https://docs.colyseus.io/tools/loadtest
-- unit testing https://docs.colyseus.io/tools/unit-testing
 - Explore DBs https://docs.colyseus.io/database
 - Add OAuth with Google or Github
