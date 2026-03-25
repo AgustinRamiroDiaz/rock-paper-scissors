@@ -61,7 +61,7 @@ export class LobbyScene extends Phaser.Scene {
     });
 
     this.createButton(width / 2, btnY, "REFRESH", 0x533483, () => {
-      this.refreshRooms();
+      void this.refreshRooms();
     });
 
     this.createButton(width / 2 + 200, btnY, "LEADERBOARD", 0x0f3460, () => {
@@ -70,7 +70,7 @@ export class LobbyScene extends Phaser.Scene {
     });
 
     // Auto-refresh
-    this.refreshRooms();
+    void this.refreshRooms();
     this.refreshTimer = this.time.addEvent({
       delay: 3000,
       loop: true,
@@ -109,7 +109,7 @@ export class LobbyScene extends Phaser.Scene {
     try {
       const rooms = (await network.getAvailableRooms()) as RoomListing[];
       this.renderRoomList(rooms);
-    } catch (err) {
+    } catch {
       if (this.statusText) {
         this.statusText.setText("Failed to fetch rooms");
       }
@@ -134,8 +134,8 @@ export class LobbyScene extends Phaser.Scene {
 
     rooms.forEach((room, index) => {
       const y = index * 60;
-      const roomName = room.metadata?.roomName ?? "RPS Game";
-      const format = room.metadata?.matchFormat === 5 ? "Bo5" : "Bo3";
+      const roomName = room.metadata.roomName;
+      const format = room.metadata.matchFormat === 5 ? "Bo5" : "Bo3";
       const playerCount = room.clients;
       const isFull = playerCount >= 2;
 
@@ -177,18 +177,20 @@ export class LobbyScene extends Phaser.Scene {
         })
         .setOrigin(0.5);
 
-      joinBtn.on("pointerdown", async () => {
-        const playerName = this.registry.get("playerName") ?? "Anonymous";
-        try {
-          await network.joinRoom(room.roomId, playerName, isFull);
-          this.cleanupTimers();
-          this.scene.start("GameScene", { spectating: isFull });
-        } catch (err) {
-          console.error("Failed to join room:", err);
-        }
+      joinBtn.on("pointerdown", () => {
+        const playerName = (this.registry.get("playerName") as string | undefined) ?? "Anonymous";
+        void (async () => {
+          try {
+            await network.joinRoom(room.roomId, playerName, isFull);
+            this.cleanupTimers();
+            this.scene.start("GameScene", { spectating: isFull });
+          } catch (err) {
+            console.error("Failed to join room:", err);
+          }
+        })();
       });
 
-      this.roomListContainer!.add([bg, joinBtn]);
+      this.roomListContainer?.add([bg, joinBtn]);
     });
   }
 
@@ -257,24 +259,26 @@ export class LobbyScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
 
-    const createRoom = async (format: MatchFormat) => {
-      const playerName = this.registry.get("playerName") ?? "Anonymous";
-      try {
-        await network.createRoom(playerName, format);
-        this.cleanupTimers();
-        this.scene.start("GameScene", { spectating: false });
-      } catch (err) {
-        console.error("Failed to create room:", err);
-      }
+    const createRoom = (format: MatchFormat) => {
+      const playerName = (this.registry.get("playerName") as string | undefined) ?? "Anonymous";
+      void (async () => {
+        try {
+          await network.createRoom(playerName, format);
+          this.cleanupTimers();
+          this.scene.start("GameScene", { spectating: false });
+        } catch (err) {
+          console.error("Failed to create room:", err);
+        }
+      })();
     };
 
     bo3.on("pointerover", () => bo3.setFillStyle(0x6b44a0));
     bo3.on("pointerout", () => bo3.setFillStyle(0x533483));
-    bo3.on("pointerdown", () => createRoom(MatchFormat.BestOf3));
+    bo3.on("pointerdown", () => { createRoom(MatchFormat.BestOf3); });
 
     bo5.on("pointerover", () => bo5.setFillStyle(0x6b44a0));
     bo5.on("pointerout", () => bo5.setFillStyle(0x533483));
-    bo5.on("pointerdown", () => createRoom(MatchFormat.BestOf5));
+    bo5.on("pointerdown", () => { createRoom(MatchFormat.BestOf5); });
 
     cancel.on("pointerdown", () => {
       panel.destroy(true);

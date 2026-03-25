@@ -11,7 +11,10 @@ class NetworkManager {
   }
 
   async getAvailableRooms() {
-    return this.client.getAvailableRooms("rps");
+    const protocol = window.location.protocol;
+    const res = await fetch(`${protocol}//${window.location.host}/matchmake/rps`);
+    if (!res.ok) return [];
+    return res.json() as Promise<unknown[]>;
   }
 
   async createRoom(playerName: string, matchFormat: MatchFormat) {
@@ -35,7 +38,7 @@ class NetworkManager {
   }
 
   disconnect() {
-    this.room?.leave();
+    void this.room?.leave();
     this.room = null;
   }
 }

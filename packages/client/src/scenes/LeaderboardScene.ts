@@ -69,7 +69,7 @@ export class LeaderboardScene extends Phaser.Scene {
 
     try {
       const response = await fetch("/api/leaderboard?limit=15");
-      const entries: LeaderboardEntry[] = await response.json();
+      const entries = await response.json() as LeaderboardEntry[];
       loadingText.destroy();
 
       if (entries.length === 0) {
@@ -113,7 +113,7 @@ export class LeaderboardScene extends Phaser.Scene {
             .rectangle(width / 2, y + 8, width - 60, 28, 0xe94560, 0.08);
         }
       });
-    } catch (err) {
+    } catch {
       loadingText.setText("Failed to load leaderboard");
     }
   }

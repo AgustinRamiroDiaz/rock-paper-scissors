@@ -13,7 +13,6 @@ import {
   Choice,
   RoomPhase,
   ClientMessage,
-  ServerMessage,
   MatchFormat,
 } from "@rps/shared";
 
@@ -26,13 +25,13 @@ let leaderboardService: LeaderboardService;
 /** Wait for a room's state to reach a specific phase */
 function waitForPhase(room: Room, phase: string, timeoutMs = 15000): Promise<void> {
   return new Promise((resolve, reject) => {
-    const state = room.state as any;
+    const state = room.state;
     if (state.phase === phase) {
       resolve();
       return;
     }
     const timer = setTimeout(
-      () => reject(new Error(`Timed out waiting for phase "${phase}" (stuck on "${state.phase}")`)),
+      () => { reject(new Error(`Timed out waiting for phase "${phase}" (stuck on "${state.phase}")`)); },
       timeoutMs,
     );
     const $ = Callbacks.get(room);
@@ -99,7 +98,7 @@ describe("RPS E2E", () => {
     expect(room2.sessionId).toBeDefined();
     expect(room2.roomId).toBe(room1.roomId);
 
-    const state1 = room1.state as any;
+    const state1 = room1.state;
 
     // Round 1: Alice=Rock, Bob=Scissors -> Alice wins
     await playRound(room1, room2, Choice.Rock, Choice.Scissors);
@@ -164,7 +163,7 @@ describe("RPS E2E", () => {
     });
     const room2 = await client2.joinById(room1.roomId, { name: "Dana" });
 
-    const state1 = room1.state as any;
+    const state1 = room1.state;
 
     // Win 2 rounds quickly (Rock beats Scissors)
     for (let i = 0; i < 2; i++) {
@@ -201,7 +200,7 @@ describe("RPS E2E", () => {
     });
     const room2 = await client2.joinById(room1.roomId, { name: "Frank" });
 
-    const state1 = room1.state as any;
+    const state1 = room1.state;
 
     await waitForPhase(room1, RoomPhase.Choosing);
 
@@ -232,7 +231,7 @@ describe("RPS E2E", () => {
     });
     expect(room3.sessionId).toBeDefined();
 
-    const state3 = room3.state as any;
+    const state3 = room3.state;
 
     await waitForPhase(room3, RoomPhase.Choosing);
     expect(state3.spectatorCount).toBe(1);
@@ -269,7 +268,7 @@ describe("RPS E2E", () => {
     });
     const room2 = await client2.joinById(room1.roomId, { name: "Jack" });
 
-    const state1 = room1.state as any;
+    const state1 = room1.state;
 
     // Play a draw round
     await waitForPhase(room1, RoomPhase.Choosing);

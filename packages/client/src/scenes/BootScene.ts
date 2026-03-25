@@ -57,7 +57,7 @@ export class BootScene extends Phaser.Scene {
       .rectangle(width / 2, height / 2 + 100, 200, 50, 0xe94560)
       .setInteractive({ useHandCursor: true });
 
-    const btnText = this.add
+    this.add
       .text(width / 2, height / 2 + 100, "PLAY", {
         fontSize: "22px",
         color: "#ffffff",
@@ -86,7 +86,7 @@ export class BootScene extends Phaser.Scene {
     });
 
     // Auto focus
-    this.time.delayedCall(100, () => inputEl.focus());
+    this.time.delayedCall(100, () => { inputEl.focus(); });
   }
 
   private cleanup() {

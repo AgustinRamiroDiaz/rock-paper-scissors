@@ -7,6 +7,15 @@
     "dev:server": "bun run --filter server dev",
     "dev:client": "bun run --filter client dev",
     "build": "bun run --filter '*' build",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "lint": "eslint packages/",
+    "lint:fix": "eslint packages/ --fix"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.57.2",
+    "@typescript-eslint/parser": "^8.57.2",
+    "eslint": "^10.1.0",
+    "jiti": "^2.6.1",
+    "typescript-eslint": "^8.57.2"
   }
 }

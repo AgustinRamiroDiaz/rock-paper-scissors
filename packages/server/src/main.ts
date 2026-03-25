@@ -3,7 +3,7 @@ import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
 import express from "express";
 import { AppModule } from "./app.module";
-import { Server, defineRoom } from "colyseus";
+import { monitor, Server } from "colyseus";
 import { BunWebSockets } from "@colyseus/bun-websockets";
 import { RPSRoom } from "./colyseus/rooms/rps.room";
 import { LeaderboardService } from "./leaderboard/leaderboard.service";
@@ -16,7 +16,7 @@ async function bootstrap() {
     transport: new BunWebSockets(),
     express: (colyseusApp) => {
       // NestJS will mount its routes onto the same Express app
-      nestSetup(colyseusApp);
+      void nestSetup(colyseusApp);
     },
   });
 
@@ -31,6 +31,7 @@ async function nestSetup(expressApp: express.Application) {
   const adapter = new ExpressAdapter(expressApp);
   const app = await NestFactory.create(AppModule, adapter);
   app.enableCors();
+  app.use("/monitor", monitor());
 
   // Inject leaderboard service into Colyseus rooms
   const leaderboardService = app.get(LeaderboardService);
@@ -39,4 +40,4 @@ async function nestSetup(expressApp: express.Application) {
   await app.init();
 }
 
-bootstrap();
+void bootstrap();

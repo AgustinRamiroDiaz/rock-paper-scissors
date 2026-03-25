@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison -- Colyseus state is untyped on client */
+/* eslint-disable @typescript-eslint/restrict-template-expressions -- Colyseus state is untyped on client */
+/* eslint-disable @typescript-eslint/no-unnecessary-condition -- runtime-mutable state */
+/* eslint-disable @typescript-eslint/no-explicit-any -- Colyseus state is untyped on client */
 import Phaser from "phaser";
 import { network } from "../network/client";
 import {
@@ -6,7 +10,7 @@ import {
   ClientMessage,
   ServerMessage,
 } from "@rps/shared";
-import type { Room } from "@colyseus/sdk";
+import { type Room, Callbacks } from "@colyseus/sdk";
 
 const CHOICE_SHAPES: Record<Choice, { label: string; color: number; shape: string }> = {
   [Choice.Rock]: { label: "ROCK", color: 0xe94560, shape: "circle" },
@@ -45,7 +49,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
-    const { width, height } = this.scale;
     this.room = network.getRoom();
     if (!this.room) {
       this.scene.start("LobbyScene");
@@ -256,15 +259,17 @@ export class GameScene extends Phaser.Scene {
 
   private setupListeners() {
     if (!this.room) return;
-    const state = this.room.state as any;
+    const room = this.room;
+    const state = room.state as Record<string, unknown>;
+    const $ = Callbacks.get(room);
 
     // Watch phase changes
-    state.listen("phase", (newPhase: string) => {
+    $.listen("phase" as never, (newPhase: string) => {
       this.onPhaseChange(newPhase);
     });
 
     // Watch countdown
-    state.listen("countdownRemaining", (value: number) => {
+    $.listen("countdownRemaining" as never, (value: number) => {
       if (state.phase === RoomPhase.Countdown) {
         this.countdownText.setText(value.toString());
         this.countdownText.setVisible(true);
@@ -281,45 +286,44 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Watch player changes
-    state.players.onAdd((player: any, sessionId: string) => {
+    $.onAdd("players" as never, (player: Record<string, unknown>, _sessionId: string) => {
       this.updatePlayerDisplay(state);
 
-      player.listen("score", () => this.updatePlayerDisplay(state));
-      player.listen("hasChosen", () => this.updateOpponentStatus(state));
-      player.listen("connected", () => this.updateConnectionStatus(state));
+      $.listen(player as never, "score" as never, () => { this.updatePlayerDisplay(state); });
+      $.listen(player as never, "hasChosen" as never, () => { this.updateOpponentStatus(state); });
+      $.listen(player as never, "connected" as never, () => { this.updateConnectionStatus(state); });
     });
 
-    state.players.onRemove(() => {
+    $.onRemove("players" as never, () => {
       this.updatePlayerDisplay(state);
     });
 
     // Watch spectator count
-    state.listen("spectatorCount", (count: number) => {
+    $.listen("spectatorCount" as never, (count: number) => {
       this.spectatorText.setText(count > 0 ? `Spectators: ${count}` : "");
     });
 
     // Server messages
-    this.room.onMessage(ServerMessage.OpponentDisconnected, () => {
+    room.onMessage(ServerMessage.OpponentDisconnected, () => {
       this.bannerText.setText("Opponent disconnected - waiting for reconnection...");
       this.bannerText.setVisible(true);
     });
 
-    this.room.onMessage(ServerMessage.OpponentReconnected, () => {
+    room.onMessage(ServerMessage.OpponentReconnected, () => {
       this.bannerText.setVisible(false);
     });
 
-    this.room.onMessage(ServerMessage.Error, (data: { message: string }) => {
+    room.onMessage(ServerMessage.Error, (data: { message: string }) => {
       console.warn("Server error:", data.message);
     });
 
     // Trigger initial state
-    this.onPhaseChange(state.phase);
+    this.onPhaseChange(state.phase as string);
     this.updatePlayerDisplay(state);
   }
 
   private onPhaseChange(phase: string) {
-    const { width, height } = this.scale;
-    const state = (this.room as any)?.state;
+    const state = this.room?.state as Record<string, unknown> | undefined;
 
     // Hide everything first
     this.countdownText.setVisible(false);
@@ -375,6 +379,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private updatePlayerDisplay(state: any) {
     const p1 = state.players.get(state.player1Id);
     const p2 = state.players.get(state.player2Id);
@@ -385,14 +390,15 @@ export class GameScene extends Phaser.Scene {
     this.p2ScoreText.setText(p2 ? `Score: ${p2.score}` : "Score: 0");
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Colyseus untyped state
   private updateOpponentStatus(state: any) {
     if (state.phase !== RoomPhase.Choosing) return;
 
     const myId = this.room?.sessionId;
     let opponentHasChosen = false;
 
-    state.players.forEach((player: any, id: string) => {
-      if (id !== myId && player.hasChosen) {
+    state.players.forEach((player: any, playerId: string) => {
+      if (playerId !== myId && player.hasChosen) {
         opponentHasChosen = true;
       }
     });
@@ -404,6 +410,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private updateConnectionStatus(state: any) {
     let allConnected = true;
     state.players.forEach((player: any) => {
@@ -415,8 +422,9 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private showReveal(state: any) {
-    const { width, height } = this.scale;
+    const { height } = this.scale;
     const p1 = state.players.get(state.player1Id);
     const p2 = state.players.get(state.player2Id);
 
@@ -486,8 +494,9 @@ export class GameScene extends Phaser.Scene {
     container.add([shape, label, nameLabel]);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private showRoundResult(state: any) {
-    const { width, height } = this.scale;
+    const { height } = this.scale;
     const rounds = state.rounds;
     if (rounds.length === 0) return;
 
@@ -538,6 +547,7 @@ export class GameScene extends Phaser.Scene {
     this.phaseText.setY(height / 2);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private showMatchEnd(state: any) {
     const { width, height } = this.scale;
     this.matchEndContainer.removeAll(true);

@@ -1,4 +1,4 @@
-import { Room, Client, Delayed } from "colyseus";
+import { Room, type Client, type Delayed } from "colyseus";
 import { RPSRoomState, PlayerSchema, RoundSchema } from "../schemas/rps.state";
 import {
   Choice,
@@ -15,7 +15,7 @@ import {
 import type { LeaderboardService } from "../../leaderboard/leaderboard.service";
 
 export class RPSRoom extends Room<RPSRoomState> {
-  static leaderboardService: LeaderboardService;
+  static leaderboardService: LeaderboardService | undefined;
 
   private pendingChoices = new Map<string, Choice>();
   private playerSlots: string[] = [];
@@ -25,11 +25,11 @@ export class RPSRoom extends Room<RPSRoomState> {
   private playAgainVotes = new Set<string>();
 
   onCreate(options: { name?: string; matchFormat?: number }) {
-    this.setState(new RPSRoomState());
+    this.state = new RPSRoomState();
     this.state.matchFormat = options.matchFormat ?? 3;
     this.maxClients = 10;
 
-    this.setMetadata({
+    void this.setMetadata({
       roomName: options.name ?? "RPS Game",
       matchFormat: this.state.matchFormat,
     });
@@ -68,7 +68,8 @@ export class RPSRoom extends Room<RPSRoomState> {
     }
   }
 
-  async onLeave(client: Client, consented: boolean) {
+  async onLeave(client: Client, code?: number) {
+    const consented = code !== undefined && code >= 1000 && code <= 1015;
     if (this.spectators.has(client.sessionId)) {
       this.spectators.delete(client.sessionId);
       this.state.spectatorCount--;
@@ -124,9 +125,9 @@ export class RPSRoom extends Room<RPSRoomState> {
 
       const winner = this.state.players.get(remainingPlayerId);
       const loser = this.state.players.get(sessionId);
-      if (winner && loser && RPSRoom.leaderboardService) {
-        RPSRoom.leaderboardService.recordWin(winner.name);
-        RPSRoom.leaderboardService.recordLoss(loser.name);
+      if (winner && loser) {
+        RPSRoom.leaderboardService?.recordWin(winner.name);
+        RPSRoom.leaderboardService?.recordLoss(loser.name);
       }
     }
 
@@ -220,8 +221,9 @@ export class RPSRoom extends Room<RPSRoomState> {
 
     const p1Id = this.state.player1Id;
     const p2Id = this.state.player2Id;
-    const p1Choice = this.pendingChoices.get(p1Id)!;
-    const p2Choice = this.pendingChoices.get(p2Id)!;
+    const p1Choice = this.pendingChoices.get(p1Id);
+    const p2Choice = this.pendingChoices.get(p2Id);
+    if (!p1Choice || !p2Choice) return;
 
     // Reveal choices in the schema (now visible to clients)
     const p1 = this.state.players.get(p1Id);
@@ -287,10 +289,8 @@ export class RPSRoom extends Room<RPSRoomState> {
       });
 
       // Update leaderboard
-      if (RPSRoom.leaderboardService) {
-        RPSRoom.leaderboardService.recordWin(winner.name);
-        RPSRoom.leaderboardService.recordLoss(loser.name);
-      }
+      RPSRoom.leaderboardService?.recordWin(winner.name);
+      RPSRoom.leaderboardService?.recordLoss(loser.name);
     } else {
       // Next round
       this.state.phase = RoomPhase.RoundEnd;
@@ -303,7 +303,7 @@ export class RPSRoom extends Room<RPSRoomState> {
   }
 
   private resetPlayerChoiceState() {
-    this.state.players.forEach((player) => {
+    this.state.players.forEach((player: PlayerSchema) => {
       player.hasChosen = false;
       player.currentChoice = "";
     });
@@ -316,7 +316,7 @@ export class RPSRoom extends Room<RPSRoomState> {
     this.pendingChoices.clear();
     this.playAgainVotes.clear();
 
-    this.state.players.forEach((player) => {
+    this.state.players.forEach((player: PlayerSchema) => {
       player.score = 0;
       player.ready = false;
       player.hasChosen = false;
