@@ -1,7 +1,6 @@
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
-import express from "express";
 import { AppModule } from "./app.module";
 import { matchMaker, monitor, Server } from "colyseus";
 import { BunWebSockets } from "@colyseus/bun-websockets";
@@ -11,29 +10,17 @@ import { LeaderboardService } from "./leaderboard/leaderboard.service";
 async function bootstrap() {
   const port = parseInt(process.env.PORT ?? "2567", 10);
 
-  // Create Colyseus server - it owns the HTTP server and listen lifecycle
-  const gameServer = new Server({
-    transport: new BunWebSockets(),
-    express: (colyseusApp) => {
-      // NestJS will mount its routes onto the same Express app
-      void nestSetup(colyseusApp);
-    },
-  });
+  // BunWebSockets must own `Bun.serve()` for WebSocket upgrades,
+  // so we extract its Express app and mount NestJS on it.
+  const transport = new BunWebSockets();
+  const expressApp = transport.getExpressApp();
 
-  gameServer.define("rps", RPSRoom);
-  await gameServer.listen(port);
-
-  console.log(`Server running on http://localhost:${port}`);
-  console.log(`Colyseus rooms registered: rps`);
-}
-
-async function nestSetup(expressApp: express.Application) {
-  const adapter = new ExpressAdapter(expressApp);
-  const app = await NestFactory.create(AppModule, adapter);
+  // Initialize NestJS on the shared Express instance
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
   app.enableCors();
   app.use("/monitor", monitor());
 
-  // Room listing endpoint (Colyseus 0.17 doesn't expose this by default)
+  // Room listing (Colyseus 0.17 doesn't expose this by default)
   expressApp.get("/matchmake/:roomName", async (req, res) => {
     try {
       const rooms = await matchMaker.query({ name: req.params.roomName, private: false, locked: false });
@@ -43,11 +30,17 @@ async function nestSetup(expressApp: express.Application) {
     }
   });
 
-  // Inject leaderboard service into Colyseus rooms
-  const leaderboardService = app.get(LeaderboardService);
-  RPSRoom.leaderboardService = leaderboardService;
+  // Make NestJS services available to Colyseus rooms
+  RPSRoom.leaderboardService = app.get(LeaderboardService);
 
   await app.init();
+
+  // Start Colyseus with the transport (handles WebSocket + HTTP listening)
+  const gameServer = new Server({ transport, greet: false });
+  gameServer.define("rps", RPSRoom);
+  await gameServer.listen(port);
+
+  console.log(`Server running on http://localhost:${port}`);
 }
 
 void bootstrap();
