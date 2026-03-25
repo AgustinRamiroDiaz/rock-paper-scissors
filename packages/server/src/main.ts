@@ -3,7 +3,7 @@ import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
 import express from "express";
 import { AppModule } from "./app.module";
-import { monitor, Server } from "colyseus";
+import { matchMaker, monitor, Server } from "colyseus";
 import { BunWebSockets } from "@colyseus/bun-websockets";
 import { RPSRoom } from "./colyseus/rooms/rps.room";
 import { LeaderboardService } from "./leaderboard/leaderboard.service";
@@ -32,6 +32,16 @@ async function nestSetup(expressApp: express.Application) {
   const app = await NestFactory.create(AppModule, adapter);
   app.enableCors();
   app.use("/monitor", monitor());
+
+  // Room listing endpoint (Colyseus 0.17 doesn't expose this by default)
+  expressApp.get("/matchmake/:roomName", async (req, res) => {
+    try {
+      const rooms = await matchMaker.query({ name: req.params.roomName, private: false, locked: false });
+      res.json(rooms);
+    } catch {
+      res.json([]);
+    }
+  });
 
   // Inject leaderboard service into Colyseus rooms
   const leaderboardService = app.get(LeaderboardService);

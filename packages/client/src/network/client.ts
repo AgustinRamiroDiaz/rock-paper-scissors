@@ -1,18 +1,18 @@
 import { Client, Room } from "@colyseus/sdk";
 import type { MatchFormat } from "@rps/shared";
 
+const SERVER_URL = "localhost:2567";
+
 class NetworkManager {
   private client: Client;
   private room: Room | null = null;
 
   constructor() {
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    this.client = new Client(`${protocol}://${window.location.host}`);
+    this.client = new Client(`ws://${SERVER_URL}`);
   }
 
   async getAvailableRooms() {
-    const protocol = window.location.protocol;
-    const res = await fetch(`${protocol}//${window.location.host}/matchmake/rps`);
+    const res = await fetch(`http://${SERVER_URL}/matchmake/rps`);
     if (!res.ok) return [];
     return res.json() as Promise<unknown[]>;
   }

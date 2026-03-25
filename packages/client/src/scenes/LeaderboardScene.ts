@@ -68,7 +68,7 @@ export class LeaderboardScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     try {
-      const response = await fetch("/api/leaderboard?limit=15");
+      const response = await fetch("http://localhost:2567/api/leaderboard?limit=15");
       const entries = await response.json() as LeaderboardEntry[];
       loadingText.destroy();
 
