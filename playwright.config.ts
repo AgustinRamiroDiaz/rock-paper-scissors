@@ -9,18 +9,6 @@ export default defineConfig({
     baseURL: "http://localhost:3001",
     headless: true,
   },
-  webServer: [
-    {
-      command: "bun run dev:server",
-      port: 2567,
-      reuseExistingServer: true,
-    },
-    {
-      command: "bun run dev:client",
-      port: 3001,
-      reuseExistingServer: true,
-    },
-  ],
   projects: [
     {
       name: "chromium",

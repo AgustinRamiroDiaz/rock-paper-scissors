@@ -26,6 +26,20 @@ jobs:
   e2e-tests:
     name: Playwright E2E
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.3-alpine3.23
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - uses: actions/checkout@v4
 
@@ -38,6 +52,42 @@ jobs:
       - name: Install Playwright browsers
         run: bunx playwright install chromium --with-deps
 
+      - name: Start backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+        run: |
+          nohup bun run dev:server > /tmp/server.log 2>&1 &
+
+      - name: Wait for backend
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:2567/api/leaderboard > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Backend failed to start"
+          cat /tmp/server.log
+          exit 1
+
+      - name: Start frontend
+        env:
+          VITE_SERVER_HOST: localhost:2567
+        run: |
+          nohup bun run dev:client > /tmp/client.log 2>&1 &
+
+      - name: Wait for frontend
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:3001 > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Frontend failed to start"
+          cat /tmp/client.log
+          exit 1
+
       - name: Run Playwright tests
         run: bun run test:e2e
 
@@ -47,4 +97,14 @@ jobs:
         with:
           name: playwright-report
           path: test-results/
+          retention-days: 7
+
+      - name: Upload app logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-logs
+          path: |
+            /tmp/server.log
+            /tmp/client.log
           retention-days: 7

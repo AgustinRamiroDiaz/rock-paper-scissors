@@ -2,12 +2,12 @@ import { test, expect, type Page } from "@playwright/test";
 
 const CLIENT_URL = "http://localhost:3001";
 
-/** Helper: enter name and navigate to lobby */
-async function enterName(page: Page, name: string) {
+/** Helper: open portal and set player name inline */
+async function openPortal(page: Page, name: string) {
   await page.goto(CLIENT_URL);
   await page.getByTestId("name-input").fill(name);
-  await page.getByTestId("play-btn").click();
-  await page.waitForURL("**/lobby");
+  await page.getByTestId("name-input").press("Enter");
+  await page.getByTestId("create-room-btn").waitFor({ timeout: 10_000 });
 }
 
 /** Helper: create a Bo3 room and wait for game page */
@@ -57,24 +57,23 @@ test.describe("Best of 3 match with spectator", () => {
     const player2 = await ctx2.newPage();
     const spectator = await ctx3.newPage();
 
-    // --- Player 1 enters name and creates a room ---
-    await enterName(player1, "Alice");
+    // --- Player 1 opens the portal and creates a room ---
+    await openPortal(player1, "Alice");
     await createBo3Room(player1);
 
     // Player 1 should be waiting for opponent
     await player1.getByTestId("phase-waiting").waitFor({ timeout: 5_000 });
 
-    // --- Player 2 enters name and joins the room ---
-    await enterName(player2, "Bob");
+    // --- Player 2 opens the portal and joins the room ---
+    await openPortal(player2, "Bob");
     await joinFirstRoom(player2);
 
     // Both players should now be in choosing phase
     await waitForChoosing(player1);
     await waitForChoosing(player2);
 
-    // --- Spectator enters name and spectates ---
-    await enterName(spectator, "Charlie");
-    // After player2 joined, the room is full — refresh to see spectate button
+    // --- Spectator opens the portal and spectates ---
+    await openPortal(spectator, "Charlie");
     await spectator.getByTestId("spectate-btn").first().waitFor({ timeout: 10_000 });
     await spectateFirstRoom(spectator);
 
@@ -86,7 +85,7 @@ test.describe("Best of 3 match with spectator", () => {
     await choose(player1, "rock");
     await choose(player2, "scissors");
 
-    // Wait for reveal/round_end then back to choosing
+    // Wait for reveal then back to choosing
     await waitForChoosing(player1);
     await waitForChoosing(player2);
 

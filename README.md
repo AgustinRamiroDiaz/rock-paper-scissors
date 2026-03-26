@@ -151,13 +151,17 @@ Tests cover: full Bo3 match, play again, disconnect forfeit, spectator join, dra
 
 ### E2E Tests (Playwright)
 
-Opens 3 browser contexts (2 players + 1 spectator), plays a full match through the UI:
+Opens 3 browser contexts (2 players + 1 spectator), plays a full match through the UI.
+The frontend, backend, and PostgreSQL must already be running before you execute Playwright.
 
 ```bash
 # Install browser (first time only)
 bunx playwright install chromium --with-deps
 
-# Run tests (starts server + client automatically)
+# Start the app stack first
+docker compose up -d postgres server client
+
+# Run tests against the running services
 bun run test:e2e
 ```
 
