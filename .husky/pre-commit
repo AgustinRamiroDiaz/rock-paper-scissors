@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+
+set -eu
+
+echo "Running lint..."
+bun run lint
+
+echo "Running tests..."
+bun run test

@@ -147,6 +147,12 @@ cd packages/server
 bun test
 ```
 
+Or from the repo root:
+
+```bash
+bun run test
+```
+
 Tests cover: full Bo3 match, play again, disconnect forfeit, spectator join, draw rounds.
 
 ### E2E Tests (Playwright)
@@ -163,6 +169,24 @@ docker compose up -d postgres server client
 
 # Run tests against the running services
 bun run test:e2e
+```
+
+## Git Hooks
+
+This repo uses a tracked `pre-commit` hook in `.husky/pre-commit` to block commits when lint or tests fail.
+
+Install hooks for your clone:
+
+```bash
+bun install
+```
+
+That runs the root `prepare` script (`husky`), which sets Git's `core.hooksPath` to Husky's hook directory.
+
+You can also configure it manually:
+
+```bash
+bun run prepare
 ```
 
 ### Load Test (Stress Test)

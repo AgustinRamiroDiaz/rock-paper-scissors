@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
 import { Server } from "colyseus";
 import { BunWebSockets } from "@colyseus/bun-websockets";
-import { boot, ColyseusTestServer } from "@colyseus/testing";
+import { ColyseusTestServer } from "@colyseus/testing";
 import { RPSRoom } from "../colyseus/rooms/rps.room";
 import { LeaderboardService } from "../leaderboard/leaderboard.service";
 import {
@@ -12,8 +12,27 @@ import {
   MatchFormat,
 } from "@rps/shared";
 
-let colyseus: ColyseusTestServer;
+let colyseus: ColyseusTestServer | undefined;
 let leaderboardService: LeaderboardService;
+
+function getTestPort() {
+  return 30_000 + Math.floor(Math.random() * 20_000);
+}
+
+async function startServerWithRetry(server: Server, attempts = 25) {
+  for (let i = 0; i < attempts; i++) {
+    const port = getTestPort();
+    try {
+      await server.listen(port);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== "EADDRINUSE" || i === attempts - 1) {
+        throw error;
+      }
+    }
+  }
+}
 
 beforeAll(async () => {
   leaderboardService = new LeaderboardService();
@@ -21,15 +40,21 @@ beforeAll(async () => {
 
   const server = new Server({ transport: new BunWebSockets(), greet: false });
   server.define("rps", RPSRoom);
-  colyseus = await boot(server);
+
+  await startServerWithRetry(server);
+  colyseus = new ColyseusTestServer(server);
 });
 
 afterAll(async () => {
-  await colyseus.shutdown();
+  if (colyseus) {
+    await colyseus.shutdown();
+  }
 });
 
 beforeEach(async () => {
-  await colyseus.cleanup();
+  if (colyseus) {
+    await colyseus.cleanup();
+  }
 });
 
 /** Wait until server room state reaches a given phase */
