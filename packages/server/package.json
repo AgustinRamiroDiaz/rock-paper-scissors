@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@colyseus/bun-websockets": "^0.17.0",
+    "@colyseus/drizzle-driver": "^0.17.0",
     "@colyseus/monitor": "^0.17.7",
     "@colyseus/schema": "^3.0.0",
     "@nestjs/common": "^11.0.0",

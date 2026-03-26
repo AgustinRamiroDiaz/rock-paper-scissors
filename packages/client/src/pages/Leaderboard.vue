@@ -38,14 +38,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import type { LeaderboardEntry } from "@rps/shared";
-
-const SERVER_URL = "localhost:2567";
+import { SERVER_HTTP_URL } from "../network/client";
 const entries = ref<LeaderboardEntry[]>([]);
 const loading = ref(true);
 
 onMounted(async () => {
   try {
-    const res = await fetch(`http://${SERVER_URL}/api/leaderboard?limit=15`);
+    const res = await fetch(`${SERVER_HTTP_URL}/api/leaderboard?limit=15`);
     entries.value = await res.json() as LeaderboardEntry[];
   } catch {
     // silently fail

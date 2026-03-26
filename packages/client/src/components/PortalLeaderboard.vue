@@ -44,7 +44,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
 import type { LeaderboardEntry } from "@rps/shared";
-import { SERVER_URL } from "../network/client";
+import { SERVER_HTTP_URL } from "../network/client";
 
 const entries = ref<LeaderboardEntry[]>([]);
 const loading = ref(true);
@@ -61,7 +61,7 @@ onUnmounted(() => {
 
 async function loadEntries() {
   try {
-    const response = await fetch(`http://${SERVER_URL}/api/leaderboard?limit=15`);
+    const response = await fetch(`${SERVER_HTTP_URL}/api/leaderboard?limit=15`);
     if (!response.ok) {
       entries.value = [];
       return;

@@ -1,4 +1,6 @@
 # Type safety
+https://docs.colyseus.io/sdk#consume-seat-reservation
+
 // ... with full-stack type safety (optional)
 import type { server } from "../../server/src/app.config.ts";
 const client = new Client<typeof server>("http://localhost:2567");

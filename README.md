@@ -46,12 +46,16 @@ bootstrap()
 │   └─ Colyseus Monitor          GET /monitor (admin dashboard)
 │
 ├─ Colyseus Server               Game transport layer
+│   ├─ PostgresDriver            Matchmaker room-cache persistence
+│   ├─ LobbyRoom                 Live room listing for the portal
 │   └─ RPSRoom                   Authoritative game room
 │       ├─ State schema           Synced to all clients automatically
 │       ├─ Message handlers       make_choice, play_again, toggle_ready
-│       └─ Game lifecycle         join → choosing → reveal → round_end → match_end
+│       └─ Game lifecycle         join → choosing → reveal → match_end
 │
-└─ matchmake routes              Room listing, create, join, reconnect
+├─ PostgreSQL                    External backing store for Colyseus driver
+│
+└─ NestJS routes                 Leaderboard + monitor
 ```
 
 NestJS initializes first and mounts on the Express app. Colyseus then starts the `BunWebSockets` transport which owns `Bun.serve()` — this is required because Bun's WebSocket API needs the upgrade to happen inside its `fetch` handler.
@@ -59,9 +63,9 @@ NestJS initializes first and mounts on the Express app. Colyseus then starts the
 ### Game Flow
 
 ```
-Waiting → Choosing → Revealing → Round End → Choosing → ... → Match End
-                                                                  │
-                                                          Play Again? ──→ Choosing
+Waiting → Choosing → Revealing → Choosing → ... → Match End
+                                                     │
+                                             Play Again? ──→ Choosing
 ```
 
 - **Authoritative server**: choices are stored in a private `Map` on the server until both players have chosen — clients cannot cheat by reading the opponent's choice early
@@ -72,12 +76,10 @@ Waiting → Choosing → Revealing → Round End → Choosing → ... → Match 
 
 | Route | Component | Description |
 |-------|-----------|-------------|
-| `/` | `NameEntry.vue` | Enter player name |
-| `/lobby` | `Lobby.vue` | Browse rooms, create (Bo3/Bo5), join, spectate |
+| `/` | `Portal.vue` | Combined portal with inline name edit, lobby, and leaderboard |
 | `/game` | `Game.vue` | Play the game — all phases rendered reactively |
-| `/leaderboard` | `Leaderboard.vue` | View ranked player stats |
 
-The client connects directly to the backend (no proxy). Room state changes are observed via `Callbacks.get(room).listen()` from `@colyseus/schema` and mapped to Vue `ref()`s.
+The client connects directly to the backend (no proxy). Room state changes are observed via `Callbacks.get(room).listen()` from `@colyseus/schema` and mapped to Vue `ref()`s. Available rooms are streamed through Colyseus `LobbyRoom`.
 
 ## Getting Started
 
@@ -90,6 +92,28 @@ The client connects directly to the backend (no proxy). Room state changes are o
 ```bash
 bun install
 ```
+
+### Start PostgreSQL
+
+```bash
+docker compose up -d postgres
+```
+
+The backend expects PostgreSQL at `postgresql://postgres:postgres@127.0.0.1:5432/postgres` by default. Override with `DATABASE_URL` if needed.
+
+For the frontend, set `VITE_SERVER_HOST` to point at the backend host and port when you are not using `localhost`.
+Example: `VITE_SERVER_HOST=192.168.1.50:2567`
+
+### Start Full Docker Dev Stack
+
+```bash
+docker compose up -d
+```
+
+This starts:
+- `postgres` on `localhost:5432`
+- `server` on `localhost:2567`
+- `client` on `localhost:3001`
 
 ### Development
 
@@ -174,10 +198,6 @@ bun run typecheck
 |--------|------|-------------|
 | GET | `/api/leaderboard` | Top players ranked by win rate |
 | GET | `/api/leaderboard/:name` | Stats for a specific player |
-| GET | `/matchmake/rps` | List available rooms |
-| POST | `/matchmake/create/rps` | Create a new room |
-| POST | `/matchmake/join/rps` | Join a room |
-| POST | `/matchmake/joinById/:id` | Join a specific room by ID |
 | GET | `/monitor/` | Colyseus admin dashboard |
 
 ## Game Protocol

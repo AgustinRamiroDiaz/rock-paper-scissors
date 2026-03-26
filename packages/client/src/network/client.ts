@@ -1,7 +1,25 @@
 import { Client, Room, type RoomAvailable } from "@colyseus/sdk";
 import type { MatchFormat } from "@rps/shared";
 
-export const SERVER_URL = "localhost:2567";
+const DEFAULT_BACKEND_HOST = "localhost:2567";
+
+function normalizeHost(value: string | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) return DEFAULT_BACKEND_HOST;
+  return trimmed.replace(/^https?:\/\//, "").replace(/^wss?:\/\//, "").replace(/\/+$/, "");
+}
+
+function resolveProtocol(secure: "http" | "ws") {
+  if (secure === "http") {
+    return window.location.protocol === "https:" ? "https" : "http";
+  }
+
+  return window.location.protocol === "https:" ? "wss" : "ws";
+}
+
+export const SERVER_HOST = normalizeHost(import.meta.env.VITE_SERVER_HOST);
+export const SERVER_HTTP_URL = `${resolveProtocol("http")}://${SERVER_HOST}`;
+export const SERVER_WS_URL = `${resolveProtocol("ws")}://${SERVER_HOST}`;
 
 type RoomMetadata = { roomName: string; matchFormat: number };
 type AvailableRoom = RoomAvailable<RoomMetadata>;
@@ -25,7 +43,7 @@ class NetworkManager {
   private lobbyCountSubscribers = new Set<(count: number) => void>();
 
   constructor() {
-    this.client = new Client(`ws://${SERVER_URL}`);
+    this.client = new Client(SERVER_WS_URL);
   }
 
   async connectLobby() {
