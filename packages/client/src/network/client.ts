@@ -10,6 +10,7 @@ type LobbyRoom = Room<{
     rooms: AvailableRoom[];
     "+": [roomId: string, room: AvailableRoom];
     "-": string;
+    lobby_count: number;
   };
 }>;
 
@@ -17,8 +18,11 @@ class NetworkManager {
   private client: Client;
   private room: Room | null = null;
   private lobbyRoom: LobbyRoom | null = null;
+  private lobbyConnectPromise: Promise<LobbyRoom> | null = null;
   private availableRooms: AvailableRoom[] = [];
+  private lobbyCount = 0;
   private lobbySubscribers = new Set<(rooms: AvailableRoom[]) => void>();
+  private lobbyCountSubscribers = new Set<(count: number) => void>();
 
   constructor() {
     this.client = new Client(`ws://${SERVER_URL}`);
@@ -26,43 +30,61 @@ class NetworkManager {
 
   async connectLobby() {
     if (this.lobbyRoom) return this.lobbyRoom;
+    if (this.lobbyConnectPromise) return this.lobbyConnectPromise;
 
-    const lobby = await this.client.joinOrCreate("lobby", {
-      filter: {
-        name: "rps",
-      },
-    }) as LobbyRoom;
+    this.lobbyConnectPromise = (async () => {
+      const lobby = await this.client.joinOrCreate("lobby", {
+        filter: {
+          name: "rps",
+        },
+      }) as LobbyRoom;
 
-    lobby.onMessage("rooms", (rooms) => {
-      this.availableRooms = [...rooms];
-      this.notifyLobbySubscribers();
-    });
+      lobby.onMessage("rooms", (rooms) => {
+        this.availableRooms = [...rooms];
+        this.notifyLobbySubscribers();
+      });
 
-    lobby.onMessage("+", ([roomId, room]) => {
-      const index = this.availableRooms.findIndex((entry) => entry.roomId === roomId);
-      if (index === -1) {
-        this.availableRooms = [...this.availableRooms, room];
-      } else {
-        this.availableRooms = this.availableRooms.map((entry, entryIndex) => (
-          entryIndex === index ? room : entry
-        ));
-      }
-      this.notifyLobbySubscribers();
-    });
+      lobby.onMessage("+", ([roomId, room]) => {
+        const index = this.availableRooms.findIndex((entry) => entry.roomId === roomId);
+        if (index === -1) {
+          this.availableRooms = [...this.availableRooms, room];
+        } else {
+          this.availableRooms = this.availableRooms.map((entry, entryIndex) => (
+            entryIndex === index ? room : entry
+          ));
+        }
+        this.notifyLobbySubscribers();
+      });
 
-    lobby.onMessage("-", (roomId) => {
-      this.availableRooms = this.availableRooms.filter((entry) => entry.roomId !== roomId);
-      this.notifyLobbySubscribers();
-    });
+      lobby.onMessage("-", (roomId) => {
+        this.availableRooms = this.availableRooms.filter((entry) => entry.roomId !== roomId);
+        this.notifyLobbySubscribers();
+      });
 
-    lobby.onLeave(() => {
-      this.lobbyRoom = null;
-      this.availableRooms = [];
-      this.notifyLobbySubscribers();
-    });
+      lobby.onMessage("lobby_count", (count) => {
+        this.lobbyCount = count;
+        this.notifyLobbyCountSubscribers();
+      });
 
-    this.lobbyRoom = lobby;
-    return lobby;
+      lobby.onLeave(() => {
+        this.lobbyRoom = null;
+        this.lobbyConnectPromise = null;
+        this.availableRooms = [];
+        this.lobbyCount = 0;
+        this.notifyLobbySubscribers();
+        this.notifyLobbyCountSubscribers();
+      });
+
+      this.lobbyRoom = lobby;
+      return lobby;
+    })();
+
+    try {
+      return await this.lobbyConnectPromise;
+    } catch (error) {
+      this.lobbyConnectPromise = null;
+      throw error;
+    }
   }
 
   async getAvailableRooms() {
@@ -77,7 +99,20 @@ class NetworkManager {
 
     return () => {
       this.lobbySubscribers.delete(callback);
-      if (this.lobbySubscribers.size === 0) {
+      if (this.lobbySubscribers.size === 0 && this.lobbyCountSubscribers.size === 0) {
+        void this.leaveLobby();
+      }
+    };
+  }
+
+  async subscribeLobbyCount(callback: (count: number) => void) {
+    this.lobbyCountSubscribers.add(callback);
+    await this.connectLobby();
+    callback(this.lobbyCount);
+
+    return () => {
+      this.lobbyCountSubscribers.delete(callback);
+      if (this.lobbySubscribers.size === 0 && this.lobbyCountSubscribers.size === 0) {
         void this.leaveLobby();
       }
     };
@@ -108,10 +143,17 @@ class NetworkManager {
     this.lobbySubscribers.forEach((callback) => { callback(snapshot); });
   }
 
+  private notifyLobbyCountSubscribers() {
+    const snapshot = this.lobbyCount;
+    this.lobbyCountSubscribers.forEach((callback) => { callback(snapshot); });
+  }
+
   private async leaveLobby() {
     const lobby = this.lobbyRoom;
     this.lobbyRoom = null;
+    this.lobbyConnectPromise = null;
     this.availableRooms = [];
+    this.lobbyCount = 0;
     if (lobby) {
       await lobby.leave();
     }

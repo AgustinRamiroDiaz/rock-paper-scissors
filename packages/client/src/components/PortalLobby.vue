@@ -4,6 +4,9 @@
       <div>
         <p class="eyebrow">Matchmaking Hub</p>
         <h2 class="panel-title">Lobby</h2>
+        <p class="lobby-presence">
+          {{ lobbyCount }} {{ lobbyCount === 1 ? "person" : "people" }} browsing the lobby
+        </p>
       </div>
 
       <label class="player-chip">
@@ -99,10 +102,12 @@ const emit = defineEmits<{
 
 const router = useRouter();
 const rooms = ref<RoomInfo[]>([]);
+const lobbyCount = ref(0);
 const loading = ref(true);
 const showCreatePanel = ref(false);
 const nameDraft = ref(props.playerName);
 let unsubscribeRooms: (() => void) | null = null;
+let unsubscribeLobbyCount: (() => void) | null = null;
 
 watch(() => props.playerName, (value) => {
   if (value !== nameDraft.value) {
@@ -112,10 +117,12 @@ watch(() => props.playerName, (value) => {
 
 onMounted(() => {
   void subscribeToRooms();
+  void subscribeToLobbyCount();
 });
 
 onUnmounted(() => {
   unsubscribeRooms?.();
+  unsubscribeLobbyCount?.();
 });
 
 function commitName() {
@@ -144,6 +151,16 @@ async function subscribeToRooms() {
   } catch {
     rooms.value = [];
     loading.value = false;
+  }
+}
+
+async function subscribeToLobbyCount() {
+  try {
+    unsubscribeLobbyCount = await network.subscribeLobbyCount((count) => {
+      lobbyCount.value = count;
+    });
+  } catch {
+    lobbyCount.value = 0;
   }
 }
 
@@ -206,6 +223,12 @@ async function joinRoom(roomId: string, spectate: boolean) {
   margin-top: 8px;
   font-size: 34px;
   color: #fff6d6;
+}
+
+.lobby-presence {
+  margin-top: 10px;
+  color: rgba(255, 240, 194, 0.7);
+  font-size: 13px;
 }
 
 .player-chip {

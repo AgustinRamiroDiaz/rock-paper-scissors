@@ -2,8 +2,9 @@ import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
 import { AppModule } from "./app.module";
-import { LobbyRoom, monitor, Server } from "colyseus";
+import { monitor, Server } from "colyseus";
 import { BunWebSockets } from "@colyseus/bun-websockets";
+import { RPSLobbyRoom } from "./colyseus/rooms/rps-lobby.room";
 import { RPSRoom } from "./colyseus/rooms/rps.room";
 import { LeaderboardService } from "./leaderboard/leaderboard.service";
 
@@ -27,7 +28,7 @@ async function bootstrap() {
 
   // Start Colyseus with the transport (handles WebSocket + HTTP listening)
   const gameServer = new Server({ transport, greet: false });
-  gameServer.define("lobby", LobbyRoom);
+  gameServer.define("lobby", RPSLobbyRoom);
   gameServer.define("rps", RPSRoom).enableRealtimeListing();
   await gameServer.listen(port);
 
