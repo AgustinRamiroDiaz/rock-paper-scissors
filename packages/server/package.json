@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "bun run --watch src/main.ts",
-    "build": "bun build src/main.ts --outdir dist --target bun"
+    "build": "bun build src/main.ts --outdir dist --target bun",
+    "loadtest": "bun run loadtest/stress.ts --room rps --numClients 20000 --endpoint ws://localhost:2567",
+    "loadtest:small": "bun run loadtest/stress.ts --room rps --numClients 100 --endpoint ws://localhost:2567"
   },
   "dependencies": {
     "@colyseus/bun-websockets": "^0.17.0",
@@ -17,6 +19,7 @@
     "rxjs": "^7.8.0"
   },
   "devDependencies": {
+    "@colyseus/loadtest": "^0.17.8",
     "@colyseus/sdk": "^0.17.35",
     "@colyseus/testing": "^0.17.11",
     "@rps/shared": "workspace:*",

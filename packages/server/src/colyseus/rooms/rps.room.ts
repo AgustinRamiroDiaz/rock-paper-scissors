@@ -234,14 +234,6 @@ export class RPSRoom extends Room<RPSRoomState> {
     round.result = result;
     this.state.rounds.push(round);
 
-    // Broadcast round result
-    this.broadcast(ServerMessage.RoundResult, {
-      round: this.state.currentRound,
-      player1Choice: p1Choice,
-      player2Choice: p2Choice,
-      result,
-    });
-
     // After reveal duration, check for match end
     this.clock.setTimeout(() => {
       this.checkMatchEnd();

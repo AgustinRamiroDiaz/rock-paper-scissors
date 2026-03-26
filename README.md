@@ -137,6 +137,24 @@ bunx playwright install chromium --with-deps
 bun run test:e2e
 ```
 
+### Load Test (Stress Test)
+
+Uses [@colyseus/loadtest](https://docs.colyseus.io/tools/loadtest) to simulate thousands of concurrent games. Clients are paired automatically: even-numbered clients create rooms, odd-numbered clients join them. Each bot plays rounds with random choices until the match ends.
+
+```bash
+# Start the server first
+bun run dev:server
+
+# Quick smoke test: 50 concurrent games (100 clients)
+cd packages/server
+bun run loadtest:small
+
+# Full stress test: 10k concurrent games (20k clients)
+bun run loadtest
+```
+
+The loadtest displays a live TUI dashboard showing connected/disconnected clients, bytes sent/received, and memory/CPU usage. Results are written to a log file.
+
 ### Linting
 
 ```bash
