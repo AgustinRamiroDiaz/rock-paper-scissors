@@ -1,7 +1,7 @@
 import { Client, Room } from "@colyseus/sdk";
 import type { MatchFormat } from "@rps/shared";
 
-const SERVER_URL = "localhost:2567";
+export const SERVER_URL = "localhost:2567";
 
 class NetworkManager {
   private client: Client;

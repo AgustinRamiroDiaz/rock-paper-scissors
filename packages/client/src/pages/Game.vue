@@ -166,7 +166,7 @@ function playAgain() {
 
 function leave() {
   network.disconnect();
-  void router.push("/lobby");
+  void router.push("/");
 }
 
 // Cleanup deregistration functions
@@ -174,7 +174,7 @@ const cleanups: (() => void)[] = [];
 
 onMounted(() => {
   if (!room) {
-    void router.push("/lobby");
+    void router.push("/");
     return;
   }
 
