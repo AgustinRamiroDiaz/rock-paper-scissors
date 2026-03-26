@@ -45,7 +45,7 @@
       </div>
 
       <!-- Revealing -->
-      <div v-else-if="phase === 'revealing' || phase === 'round_end'" class="reveal-area">
+      <div v-else-if="phase === 'revealing'" class="reveal-area">
         <div class="reveal-side">
           <span class="reveal-name">{{ p1Name }}</span>
           <span class="reveal-icon">{{ choiceIcon(p1Choice) }}</span>
@@ -57,7 +57,7 @@
           <span class="reveal-icon">{{ choiceIcon(p2Choice) }}</span>
           <span class="reveal-label">{{ p2Choice.toUpperCase() }}</span>
         </div>
-        <p v-if="phase === 'round_end'" class="round-result" :class="roundResultClass">
+        <p class="round-result" :class="roundResultClass">
           {{ roundResultText }}
         </p>
       </div>

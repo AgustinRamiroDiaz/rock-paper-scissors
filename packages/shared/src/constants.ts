@@ -19,7 +19,6 @@ export enum RoomPhase {
   WaitingForPlayers = "waiting",
   Choosing = "choosing",
   Revealing = "revealing",
-  RoundEnd = "round_end",
   MatchEnd = "match_end",
 }
 
@@ -30,5 +29,4 @@ export const CHOICE_BEATS: Record<Choice, Choice> = {
 };
 
 export const REVEAL_DURATION_MS = 2000;
-export const ROUND_END_DURATION_MS = 2500;
 export const RECONNECT_TIMEOUT_MS = 30000;

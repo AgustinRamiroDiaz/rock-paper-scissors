@@ -107,7 +107,8 @@ describe("RPS", () => {
       client1.send(ClientMessage.MakeChoice, { choice: Choice.Rock });
       client2.send(ClientMessage.MakeChoice, { choice: Choice.Scissors });
       if (i < 1) {
-        await waitForPhase(room, RoomPhase.RoundEnd);
+        await waitForPhase(room, RoomPhase.Revealing);
+        await waitForPhase(room, RoomPhase.Choosing);
       }
     }
 

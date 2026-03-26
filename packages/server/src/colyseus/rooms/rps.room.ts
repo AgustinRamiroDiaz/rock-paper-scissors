@@ -5,7 +5,6 @@ import {
   RoomPhase,
   CHOICE_BEATS,
   REVEAL_DURATION_MS,
-  ROUND_END_DURATION_MS,
   RECONNECT_TIMEOUT_MS,
   ClientMessage,
   ServerMessage,
@@ -264,12 +263,8 @@ export class RPSRoom extends Room<RPSRoomState> {
       RPSRoom.leaderboardService?.recordWin(winner.name);
       RPSRoom.leaderboardService?.recordLoss(loser.name);
     } else {
-      // Next round
-      this.state.phase = RoomPhase.RoundEnd;
-      this.clock.setTimeout(() => {
-        this.pendingChoices.clear();
-        this.startChoosing();
-      }, ROUND_END_DURATION_MS);
+      this.pendingChoices.clear();
+      this.startChoosing();
     }
   }
 
