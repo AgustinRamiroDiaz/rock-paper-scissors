@@ -17,18 +17,18 @@ import {
 } from "@rps/shared";
 import type { LeaderboardService } from "../../leaderboard/leaderboard.service";
 
-type RPSClientMessages = {
+interface RPSClientMessages {
   [ServerMessage.MatchResult]: MatchResultPayload;
   [ServerMessage.Error]: ErrorPayload;
   [ServerMessage.OpponentDisconnected]: Record<string, never>;
   [ServerMessage.OpponentReconnected]: Record<string, never>;
-};
+}
 
-type RPSRoomOptions = {
+interface RPSRoomOptions {
   state: RPSRoomState;
   metadata: RPSRoomMetadata;
   client: Client<{ messages: RPSClientMessages }>;
-};
+}
 
 function isChoice(value: string): value is Choice {
   return value === "rock" || value === "paper" || value === "scissors";
@@ -66,7 +66,7 @@ export class RPSRoom extends Room<RPSRoomOptions> {
   }
 
   onJoin(client: Client, options: RoomJoinOptions) {
-    if (options.spectate || this.playerSlots.length >= 2) {
+    if (options.spectate === true || this.playerSlots.length >= 2) {
       this.spectators.add(client.sessionId);
       this.state.spectatorCount++;
       return;
@@ -136,7 +136,7 @@ export class RPSRoom extends Room<RPSRoomOptions> {
     // Find the remaining player
     const remainingPlayerId = this.playerSlots.find((id) => id !== sessionId);
 
-    if (isActivePlaying && remainingPlayerId) {
+    if (isActivePlaying && remainingPlayerId !== undefined) {
       // Forfeit: remaining player wins
       this.state.winnerId = remainingPlayerId;
       this.state.phase = RoomPhase.MatchEnd;
@@ -224,7 +224,7 @@ export class RPSRoom extends Room<RPSRoomOptions> {
     const p2Id = this.state.player2Id;
     const p1Choice = this.pendingChoices.get(p1Id);
     const p2Choice = this.pendingChoices.get(p2Id);
-    if (!p1Choice || !p2Choice) return;
+    if (p1Choice === undefined || p2Choice === undefined) return;
 
     // Reveal choices in the schema (now visible to clients)
     const p1 = this.state.players.get(p1Id);

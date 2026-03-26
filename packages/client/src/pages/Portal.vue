@@ -21,6 +21,8 @@ import PortalLobby from "../components/PortalLobby.vue";
 import PortalLeaderboard from "../components/PortalLeaderboard.vue";
 import { getPlayerName } from "../lib/player-name";
 
+defineOptions({ name: "PortalPage" });
+
 const playerName = ref(getPlayerName());
 </script>
 

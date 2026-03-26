@@ -7,7 +7,7 @@ export class LeaderboardController {
 
   @Get()
   getLeaderboard(@Query("limit") limit?: string) {
-    const parsedLimit = limit ? parseInt(limit, 10) : 20;
+    const parsedLimit = limit != null && limit.trim() !== "" ? parseInt(limit, 10) : 20;
     return this.leaderboardService.getLeaderboard(parsedLimit);
   }
 

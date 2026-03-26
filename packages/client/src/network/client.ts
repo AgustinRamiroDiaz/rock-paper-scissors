@@ -8,7 +8,7 @@ const DEFAULT_BACKEND_HOST = "localhost:2567";
 
 function normalizeHost(value: string | undefined) {
   const trimmed = value?.trim();
-  if (!trimmed) return DEFAULT_BACKEND_HOST;
+  if (trimmed == null || trimmed === "") return DEFAULT_BACKEND_HOST;
   return trimmed.replace(/^https?:\/\//, "").replace(/^wss?:\/\//, "").replace(/\/+$/, "");
 }
 
@@ -111,7 +111,7 @@ class NetworkManager {
 
     return () => {
       this.lobbySubscribers.delete(callback);
-      if (this.lobbySubscribers.size === 0 && this.lobbyCountSubscribers.size === 0) {
+      if (this.lobbySubscribers.size === 0 && this.lobbyCountSubscribers.size === 0 && this.room == null) {
         void this.leaveLobby();
       }
     };
@@ -124,7 +124,7 @@ class NetworkManager {
 
     return () => {
       this.lobbyCountSubscribers.delete(callback);
-      if (this.lobbySubscribers.size === 0 && this.lobbyCountSubscribers.size === 0) {
+      if (this.lobbySubscribers.size === 0 && this.lobbyCountSubscribers.size === 0 && this.room == null) {
         void this.leaveLobby();
       }
     };
@@ -135,6 +135,7 @@ class NetworkManager {
       name: playerName,
       matchFormat,
     });
+    this.publishCurrentRoomId();
     return this.room;
   }
 
@@ -143,6 +144,7 @@ class NetworkManager {
       name: playerName,
       spectate,
     });
+    this.publishCurrentRoomId();
     return this.room;
   }
 
@@ -174,6 +176,14 @@ class NetworkManager {
   disconnect() {
     void this.room?.leave();
     this.room = null;
+    this.publishCurrentRoomId();
+    if (this.lobbySubscribers.size === 0 && this.lobbyCountSubscribers.size === 0) {
+      void this.leaveLobby();
+    }
+  }
+
+  private publishCurrentRoomId() {
+    window.__RPS_ROOM_ID = this.room?.roomId;
   }
 }
 

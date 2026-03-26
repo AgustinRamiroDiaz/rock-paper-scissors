@@ -52,6 +52,8 @@ import { useRouter } from "vue-router";
 import { network } from "../network/client";
 import type { MatchFormat } from "@rps/shared";
 
+defineOptions({ name: "LobbyPage" });
+
 interface RoomInfo {
   roomId: string;
   clients: number;

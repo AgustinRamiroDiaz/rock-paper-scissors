@@ -15,6 +15,13 @@ import {
 let colyseus: ColyseusTestServer | undefined;
 let leaderboardService: LeaderboardService;
 
+function assertDefined<T>(value: T | null | undefined, message: string): T {
+  if (value == null) {
+    throw new Error(message);
+  }
+  return value;
+}
+
 function getTestPort() {
   return 30_000 + Math.floor(Math.random() * 20_000);
 }
@@ -86,8 +93,10 @@ describe("RPS", () => {
 
     expect(room.state.currentRound).toBe(1);
     expect(room.state.rounds[0].result).toBe("player1");
-    expect(room.state.players.get(room.state.player1Id)!.score).toBe(1);
-    expect(room.state.players.get(room.state.player2Id)!.score).toBe(0);
+    const round1Player1 = assertDefined(room.state.players.get(room.state.player1Id), "player1 should exist");
+    const round1Player2 = assertDefined(room.state.players.get(room.state.player2Id), "player2 should exist");
+    expect(round1Player1.score).toBe(1);
+    expect(round1Player2.score).toBe(0);
 
     // Round 2: Alice=Paper, Bob=Scissors → Bob wins
     await waitForPhase(room, RoomPhase.Choosing);
@@ -105,17 +114,19 @@ describe("RPS", () => {
     await waitForPhase(room, RoomPhase.MatchEnd);
 
     expect(room.state.winnerId).toBe(client1.sessionId);
-    expect(room.state.players.get(room.state.player1Id)!.score).toBe(2);
-    expect(room.state.players.get(room.state.player2Id)!.score).toBe(1);
+    const finalPlayer1 = assertDefined(room.state.players.get(room.state.player1Id), "player1 should exist");
+    const finalPlayer2 = assertDefined(room.state.players.get(room.state.player2Id), "player2 should exist");
+    expect(finalPlayer1.score).toBe(2);
+    expect(finalPlayer2.score).toBe(1);
 
     // Verify leaderboard
     const aliceStats = leaderboardService.getPlayerStats("Alice");
-    expect(aliceStats).not.toBeNull();
-    expect(aliceStats!.wins).toBeGreaterThanOrEqual(1);
+    const alice = assertDefined(aliceStats, "alice stats should exist");
+    expect(alice.wins).toBeGreaterThanOrEqual(1);
 
     const bobStats = leaderboardService.getPlayerStats("Bob");
-    expect(bobStats).not.toBeNull();
-    expect(bobStats!.losses).toBeGreaterThanOrEqual(1);
+    const bob = assertDefined(bobStats, "bob stats should exist");
+    expect(bob.losses).toBeGreaterThanOrEqual(1);
   }, 30000);
 
   test("play again resets the match", async () => {
@@ -159,7 +170,7 @@ describe("RPS", () => {
 
     await waitForPhase(room, RoomPhase.Choosing);
 
-    client2.leave(true);
+    await client2.leave(true);
 
     await waitForPhase(room, RoomPhase.MatchEnd);
     expect(room.state.winnerId).toBe(client1.sessionId);
@@ -197,7 +208,9 @@ describe("RPS", () => {
     await waitForPhase(room, RoomPhase.Revealing);
 
     expect(room.state.rounds[0].result).toBe("draw");
-    expect(room.state.players.get(room.state.player1Id)!.score).toBe(0);
-    expect(room.state.players.get(room.state.player2Id)!.score).toBe(0);
+    const drawPlayer1 = assertDefined(room.state.players.get(room.state.player1Id), "player1 should exist");
+    const drawPlayer2 = assertDefined(room.state.players.get(room.state.player2Id), "player2 should exist");
+    expect(drawPlayer1.score).toBe(0);
+    expect(drawPlayer2.score).toBe(0);
   }, 30000);
 });

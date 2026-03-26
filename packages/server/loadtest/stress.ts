@@ -44,7 +44,7 @@ function publishRoomId(pairId: number, roomId: string) {
 
 function waitForRoomId(pairId: number): Promise<string> {
   const existing = pendingRooms.get(pairId);
-  if (existing) {
+  if (existing !== undefined) {
     pendingRooms.delete(pairId);
     return Promise.resolve(existing);
   }

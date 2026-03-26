@@ -39,6 +39,9 @@
 import { ref, onMounted } from "vue";
 import type { LeaderboardEntry } from "@rps/shared";
 import { SERVER_HTTP_URL } from "../network/client";
+
+defineOptions({ name: "LeaderboardPage" });
+
 const entries = ref<LeaderboardEntry[]>([]);
 const loading = ref(true);
 

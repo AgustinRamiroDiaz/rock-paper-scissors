@@ -56,10 +56,13 @@ export class LeaderboardService {
   }
 
   private getOrCreate(playerName: string): PlayerStats {
-    if (!this.entries.has(playerName)) {
-      this.entries.set(playerName, { wins: 0, losses: 0, draws: 0 });
+    const existing = this.entries.get(playerName);
+    if (existing) {
+      return existing;
     }
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guaranteed by has() check above
-    return this.entries.get(playerName)!;
+
+    const created: PlayerStats = { wins: 0, losses: 0, draws: 0 };
+    this.entries.set(playerName, created);
+    return created;
   }
 }

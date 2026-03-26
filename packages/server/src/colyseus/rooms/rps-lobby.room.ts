@@ -2,19 +2,19 @@ import { LobbyRoom, type Client, type Room } from "colyseus";
 import type { IRoomCache } from "@colyseus/core";
 import type { RPSRoomMetadata } from "@rps/shared";
 
-type LobbyClientMessages = {
+interface LobbyClientMessages {
   rooms: IRoomCache<RPSRoomMetadata>[];
   "+": [roomId: string, room: IRoomCache<RPSRoomMetadata>];
   "-": string;
   lobby_count: number;
-};
+}
 
-type LobbyClientOptions = {
+interface LobbyClientOptions {
   filter?: {
     name?: string;
     metadata?: Partial<RPSRoomMetadata>;
   };
-};
+}
 
 type TypedLobbyRoom = Room<{
   client: Client<{ messages: LobbyClientMessages }>;

@@ -91,26 +91,45 @@ import { Callbacks } from "@colyseus/sdk";
 import { network } from "../network/client";
 import { Choice, RoomPhase, ClientMessage } from "@rps/shared";
 
+defineOptions({ name: "GamePage" });
+
+type RoundOutcome = "player1" | "player2" | "draw" | "";
+interface PlayerView {
+  name: string;
+  score: number;
+  currentChoice: Choice | "";
+}
+interface RoomStateView {
+  phase: RoomPhase;
+  matchFormat: number;
+  currentRound: number;
+  player1Id: string;
+  player2Id: string;
+  winnerId: string;
+  players?: Map<string, PlayerView>;
+  rounds: { result: RoundOutcome }[];
+}
+
 const router = useRouter();
 const route = useRoute();
 const spectating = route.query.spectating === "1";
 
-const phase = ref("waiting");
+const phase = ref(RoomPhase.WaitingForPlayers as RoomPhase);
 const currentRound = ref(0);
 const matchFormat = ref(3);
 const p1Name = ref("Waiting...");
 const p2Name = ref("Waiting...");
 const p1Score = ref(0);
 const p2Score = ref(0);
-const p1Choice = ref("");
-const p2Choice = ref("");
+const p1Choice = ref<Choice | "">("");
+const p2Choice = ref<Choice | "">("");
 const spectatorCount = ref(0);
 const winnerId = ref("");
 const banner = ref("");
 const hasChosen = ref(false);
-const chosenValue = ref("");
+const chosenValue = ref<Choice | "">("");
 const playAgainSent = ref(false);
-const lastRoundResult = ref("");
+const lastRoundResult = ref<RoundOutcome>("");
 
 const choices = [
   { value: Choice.Rock, label: "ROCK", icon: "🪨", class: "choice-rock" },
@@ -118,32 +137,36 @@ const choices = [
   { value: Choice.Scissors, label: "SCISSORS", icon: "✂️", class: "choice-scissors" },
 ];
 
-function choiceIcon(val: string) {
+function choiceIcon(val: Choice | "") {
   return choices.find((c) => c.value === val)?.icon ?? "?";
 }
 
 const room = network.getRoom();
-const myId = room?.sessionId;
+const myId = room?.sessionId ?? "";
+const getRoomState = () => room?.state as RoomStateView | undefined;
 
 const roundResultText = computed(() => {
   if (lastRoundResult.value === "draw") return "DRAW!";
+  const roomState = getRoomState();
   const roundWinnerId = lastRoundResult.value === "player1"
-    ? (room?.state as Record<string, unknown>)?.player1Id
-    : (room?.state as Record<string, unknown>)?.player2Id;
-  if (spectating) return `${roundWinnerId === (room?.state as Record<string, unknown>)?.player1Id ? p1Name.value : p2Name.value} wins the round!`;
+    ? roomState?.player1Id
+    : roomState?.player2Id;
+  if (spectating) return `${roundWinnerId === roomState?.player1Id ? p1Name.value : p2Name.value} wins the round!`;
   return roundWinnerId === myId ? "YOU WIN THIS ROUND!" : "YOU LOSE THIS ROUND";
 });
 
 const roundResultClass = computed(() => {
   if (lastRoundResult.value === "draw") return "draw";
+  const roomState = getRoomState();
   const roundWinnerId = lastRoundResult.value === "player1"
-    ? (room?.state as Record<string, unknown>)?.player1Id
-    : (room?.state as Record<string, unknown>)?.player2Id;
+    ? roomState?.player1Id
+    : roomState?.player2Id;
   return roundWinnerId === myId ? "win" : "lose";
 });
 
 const matchResultText = computed(() => {
-  if (spectating) return `${winnerId.value === (room?.state as Record<string, unknown>)?.player1Id ? p1Name.value : p2Name.value} WINS!`;
+  const roomState = getRoomState();
+  if (spectating) return `${winnerId.value === roomState?.player1Id ? p1Name.value : p2Name.value} WINS!`;
   return winnerId.value === myId ? "VICTORY!" : "DEFEAT";
 });
 
@@ -173,21 +196,27 @@ function leave() {
 const cleanups: (() => void)[] = [];
 
 onMounted(() => {
-  if (!room) {
+  if (room == null) {
     void router.push("/");
     return;
   }
 
-  const state = room.state as Record<string, unknown>;
   const $ = Callbacks.get(room);
+  const syncFromState = () => {
+    const state = getRoomState();
+    if (state == null) return;
+    phase.value = state.phase;
+    matchFormat.value = state.matchFormat;
+    currentRound.value = state.currentRound;
+    winnerId.value = state.winnerId;
+    updatePlayers(state);
+  };
 
   // Sync initial state
-  phase.value = state.phase as string;
-  matchFormat.value = state.matchFormat as number;
-  currentRound.value = state.currentRound as number;
+  syncFromState();
 
   cleanups.push(
-    $.listen("phase" as never, (val: string) => {
+    $.listen("phase" as never, (val: RoomPhase) => {
       phase.value = val;
       if (val === RoomPhase.Choosing) {
         hasChosen.value = false;
@@ -195,14 +224,18 @@ onMounted(() => {
         playAgainSent.value = false;
       }
     }),
-$.listen("currentRound" as never, (val: number) => { currentRound.value = val; }),
+    $.listen("currentRound" as never, (val: number) => { currentRound.value = val; }),
     $.listen("matchFormat" as never, (val: number) => { matchFormat.value = val; }),
     $.listen("spectatorCount" as never, (val: number) => { spectatorCount.value = val; }),
     $.listen("winnerId" as never, (val: string) => { winnerId.value = val; }),
+    $.listen("player1Id" as never, () => { syncFromState(); }),
+    $.listen("player2Id" as never, () => { syncFromState(); }),
   );
 
   cleanups.push(
-    $.onAdd("players" as never, (player: Record<string, unknown>) => {
+    $.onAdd("players" as never, (player: PlayerView) => {
+      const state = getRoomState();
+      if (state == null) return;
       updatePlayers(state);
       cleanups.push(
         $.listen(player as never, "score" as never, () => { updatePlayers(state); }),
@@ -214,13 +247,13 @@ $.listen("currentRound" as never, (val: number) => { currentRound.value = val; }
   );
 
   cleanups.push(
-    $.onRemove("players" as never, () => { updatePlayers(state); }),
+    $.onRemove("players" as never, () => { syncFromState(); }),
   );
 
   // Watch rounds for result display
   cleanups.push(
-    $.onAdd("rounds" as never, (round: Record<string, unknown>) => {
-      lastRoundResult.value = round.result as string;
+    $.onAdd("rounds" as never, (round: { result: RoundOutcome }) => {
+      lastRoundResult.value = round.result;
     }),
   );
 
@@ -231,26 +264,36 @@ $.listen("currentRound" as never, (val: number) => { currentRound.value = val; }
     banner.value = "";
   });
 
-  updatePlayers(state);
+  syncFromState();
+  const syncInterval = window.setInterval(syncFromState, 100);
+  cleanups.push(() => { window.clearInterval(syncInterval); });
 });
 
 onUnmounted(() => {
   cleanups.forEach((fn) => { fn(); });
 });
 
-function updatePlayers(state: Record<string, unknown>) {
-  const players = state.players as Map<string, Record<string, unknown>> | undefined;
-  if (!players) return;
-  const p1Id = state.player1Id as string;
-  const p2Id = state.player2Id as string;
+function updatePlayers(state: RoomStateView) {
+  const players = state.players;
+  if (players == null) {
+    p1Name.value = "Waiting...";
+    p1Score.value = 0;
+    p1Choice.value = "";
+    p2Name.value = "Waiting...";
+    p2Score.value = 0;
+    p2Choice.value = "";
+    return;
+  }
+  const p1Id = state.player1Id;
+  const p2Id = state.player2Id;
   const p1 = players.get(p1Id);
   const p2 = players.get(p2Id);
-  p1Name.value = (p1?.name as string) ?? "Waiting...";
-  p1Score.value = (p1?.score as number) ?? 0;
-  p1Choice.value = (p1?.currentChoice as string) ?? "";
-  p2Name.value = (p2?.name as string) ?? "Waiting...";
-  p2Score.value = (p2?.score as number) ?? 0;
-  p2Choice.value = (p2?.currentChoice as string) ?? "";
+  p1Name.value = p1 !== undefined ? p1.name : "Waiting...";
+  p1Score.value = p1 !== undefined ? p1.score : 0;
+  p1Choice.value = p1 !== undefined ? p1.currentChoice : "";
+  p2Name.value = p2 !== undefined ? p2.name : "Waiting...";
+  p2Score.value = p2 !== undefined ? p2.score : 0;
+  p2Choice.value = p2 !== undefined ? p2.currentChoice : "";
 }
 </script>
 
