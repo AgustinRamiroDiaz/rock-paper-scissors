@@ -102,7 +102,7 @@ const rooms = ref<RoomInfo[]>([]);
 const loading = ref(true);
 const showCreatePanel = ref(false);
 const nameDraft = ref(props.playerName);
-let refreshInterval: ReturnType<typeof setInterval> | null = null;
+let unsubscribeRooms: (() => void) | null = null;
 
 watch(() => props.playerName, (value) => {
   if (value !== nameDraft.value) {
@@ -111,12 +111,11 @@ watch(() => props.playerName, (value) => {
 });
 
 onMounted(() => {
-  void refreshRooms();
-  refreshInterval = setInterval(() => void refreshRooms(), 3000);
+  void subscribeToRooms();
 });
 
 onUnmounted(() => {
-  if (refreshInterval) clearInterval(refreshInterval);
+  unsubscribeRooms?.();
 });
 
 function commitName() {
@@ -131,6 +130,19 @@ async function refreshRooms() {
   } catch {
     rooms.value = [];
   } finally {
+    loading.value = false;
+  }
+}
+
+async function subscribeToRooms() {
+  loading.value = true;
+  try {
+    unsubscribeRooms = await network.subscribeAvailableRooms((nextRooms) => {
+      rooms.value = nextRooms as RoomInfo[];
+      loading.value = false;
+    });
+  } catch {
+    rooms.value = [];
     loading.value = false;
   }
 }

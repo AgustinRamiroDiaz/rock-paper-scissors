@@ -1,20 +1,86 @@
-import { Client, Room } from "@colyseus/sdk";
+import { Client, Room, type RoomAvailable } from "@colyseus/sdk";
 import type { MatchFormat } from "@rps/shared";
 
 export const SERVER_URL = "localhost:2567";
 
+type RoomMetadata = { roomName: string; matchFormat: number };
+type AvailableRoom = RoomAvailable<RoomMetadata>;
+type LobbyRoom = Room<{
+  messages: {
+    rooms: AvailableRoom[];
+    "+": [roomId: string, room: AvailableRoom];
+    "-": string;
+  };
+}>;
+
 class NetworkManager {
   private client: Client;
   private room: Room | null = null;
+  private lobbyRoom: LobbyRoom | null = null;
+  private availableRooms: AvailableRoom[] = [];
+  private lobbySubscribers = new Set<(rooms: AvailableRoom[]) => void>();
 
   constructor() {
     this.client = new Client(`ws://${SERVER_URL}`);
   }
 
+  async connectLobby() {
+    if (this.lobbyRoom) return this.lobbyRoom;
+
+    const lobby = await this.client.joinOrCreate("lobby", {
+      filter: {
+        name: "rps",
+      },
+    }) as LobbyRoom;
+
+    lobby.onMessage("rooms", (rooms) => {
+      this.availableRooms = [...rooms];
+      this.notifyLobbySubscribers();
+    });
+
+    lobby.onMessage("+", ([roomId, room]) => {
+      const index = this.availableRooms.findIndex((entry) => entry.roomId === roomId);
+      if (index === -1) {
+        this.availableRooms = [...this.availableRooms, room];
+      } else {
+        this.availableRooms = this.availableRooms.map((entry, entryIndex) => (
+          entryIndex === index ? room : entry
+        ));
+      }
+      this.notifyLobbySubscribers();
+    });
+
+    lobby.onMessage("-", (roomId) => {
+      this.availableRooms = this.availableRooms.filter((entry) => entry.roomId !== roomId);
+      this.notifyLobbySubscribers();
+    });
+
+    lobby.onLeave(() => {
+      this.lobbyRoom = null;
+      this.availableRooms = [];
+      this.notifyLobbySubscribers();
+    });
+
+    this.lobbyRoom = lobby;
+    return lobby;
+  }
+
   async getAvailableRooms() {
-    const res = await fetch(`http://${SERVER_URL}/matchmake/rps`);
-    if (!res.ok) return [];
-    return res.json() as Promise<unknown[]>;
+    await this.connectLobby();
+    return this.availableRooms;
+  }
+
+  async subscribeAvailableRooms(callback: (rooms: AvailableRoom[]) => void) {
+    this.lobbySubscribers.add(callback);
+    await this.connectLobby();
+    callback(this.availableRooms);
+
+    return () => {
+      this.lobbySubscribers.delete(callback);
+      if (this.lobbySubscribers.size === 0) {
+        void this.leaveLobby();
+      }
+    };
   }
 
   async createRoom(playerName: string, matchFormat: MatchFormat) {
@@ -35,6 +101,20 @@ class NetworkManager {
 
   getRoom(): Room | null {
     return this.room;
+  }
+
+  private notifyLobbySubscribers() {
+    const snapshot = [...this.availableRooms];
+    this.lobbySubscribers.forEach((callback) => { callback(snapshot); });
+  }
+
+  private async leaveLobby() {
+    const lobby = this.lobbyRoom;
+    this.lobbyRoom = null;
+    this.availableRooms = [];
+    if (lobby) {
+      await lobby.leave();
+    }
   }
 
   disconnect() {
