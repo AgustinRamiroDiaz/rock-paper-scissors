@@ -12,7 +12,8 @@
     "lint": "eslint packages/",
     "lint:fix": "eslint packages/ --fix",
     "test": "bun test packages/server/src/__tests__",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "precommit": "bun run lint && bun run test && bun run test:e2e"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

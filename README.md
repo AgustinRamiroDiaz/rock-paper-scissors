@@ -173,7 +173,7 @@ bun run test:e2e
 
 ## Git Hooks
 
-This repo uses a tracked `pre-commit` hook in `.husky/pre-commit` to block commits when lint or tests fail.
+This repo uses a tracked `pre-commit` hook in `.husky/pre-commit` to block commits unless lint, server unit tests, and Playwright e2e tests all pass.
 
 Install hooks for your clone:
 

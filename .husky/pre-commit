@@ -2,8 +2,5 @@
 
 set -eu
 
-echo "Running lint..."
-bun run lint
-
-echo "Running tests..."
-bun run test
+echo "Running pre-commit checks (lint + unit + e2e)..."
+bun run precommit
