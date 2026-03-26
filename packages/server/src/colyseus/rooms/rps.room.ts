@@ -9,16 +9,50 @@ import {
   ClientMessage,
   ServerMessage,
   RoundResult,
+  type MakeChoicePayload,
+  type MatchResultPayload,
+  type ErrorPayload,
+  type RPSRoomMetadata,
+  type RoomJoinOptions,
 } from "@rps/shared";
 import type { LeaderboardService } from "../../leaderboard/leaderboard.service";
 
-export class RPSRoom extends Room<RPSRoomState> {
+type RPSClientMessages = {
+  [ServerMessage.MatchResult]: MatchResultPayload;
+  [ServerMessage.Error]: ErrorPayload;
+  [ServerMessage.OpponentDisconnected]: Record<string, never>;
+  [ServerMessage.OpponentReconnected]: Record<string, never>;
+};
+
+type RPSRoomOptions = {
+  state: RPSRoomState;
+  metadata: RPSRoomMetadata;
+  client: Client<{ messages: RPSClientMessages }>;
+};
+
+function isChoice(value: string): value is Choice {
+  return value === "rock" || value === "paper" || value === "scissors";
+}
+
+export class RPSRoom extends Room<RPSRoomOptions> {
   static leaderboardService: LeaderboardService | undefined;
 
   private pendingChoices = new Map<string, Choice>();
   private playerSlots: string[] = [];
   private spectators = new Set<string>();
   private playAgainVotes = new Set<string>();
+
+  messages = {
+    [ClientMessage.MakeChoice]: (client: Client, payload: MakeChoicePayload) => {
+      this.handleMakeChoice(client, payload);
+    },
+    [ClientMessage.PlayAgain]: (client: Client) => {
+      this.handlePlayAgain(client);
+    },
+    [ClientMessage.ToggleReady]: (client: Client) => {
+      this.handleToggleReady(client);
+    },
+  };
 
   onCreate(options: { name?: string; matchFormat?: number }) {
     this.state = new RPSRoomState();
@@ -29,21 +63,9 @@ export class RPSRoom extends Room<RPSRoomState> {
       roomName: options.name ?? "RPS Game",
       matchFormat: this.state.matchFormat,
     });
-
-    this.onMessage(ClientMessage.MakeChoice, (client, payload) => {
-      this.handleMakeChoice(client, payload);
-    });
-
-    this.onMessage(ClientMessage.PlayAgain, (client) => {
-      this.handlePlayAgain(client);
-    });
-
-    this.onMessage(ClientMessage.ToggleReady, (client) => {
-      this.handleToggleReady(client);
-    });
   }
 
-  onJoin(client: Client, options: { name?: string; spectate?: boolean }) {
+  onJoin(client: Client, options: RoomJoinOptions) {
     if (options.spectate || this.playerSlots.length >= 2) {
       this.spectators.add(client.sessionId);
       this.state.spectatorCount++;
@@ -52,7 +74,7 @@ export class RPSRoom extends Room<RPSRoomState> {
 
     const player = new PlayerSchema();
     player.sessionId = client.sessionId;
-    player.name = options.name ?? "Anonymous";
+    player.name = options.name;
     this.state.players.set(client.sessionId, player);
     this.playerSlots.push(client.sessionId);
 
@@ -107,7 +129,7 @@ export class RPSRoom extends Room<RPSRoomState> {
   }
 
   private handlePermanentLeave(sessionId: string) {
-    const phase = this.state.phase;
+    const phase = this.state.phase as RoomPhase;
     const isActivePlaying =
       phase !== RoomPhase.WaitingForPlayers && phase !== RoomPhase.MatchEnd;
 
@@ -141,16 +163,16 @@ export class RPSRoom extends Room<RPSRoomState> {
     }
   }
 
-  private handleMakeChoice(client: Client, payload: { choice: string }) {
-    if (this.state.phase !== RoomPhase.Choosing) return;
+  private handleMakeChoice(client: Client, payload: MakeChoicePayload) {
+    if ((this.state.phase as RoomPhase) !== RoomPhase.Choosing) return;
     if (this.spectators.has(client.sessionId)) return;
     if (this.pendingChoices.has(client.sessionId)) return;
 
-    const choice = payload.choice as Choice;
-    if (!Object.values(Choice).includes(choice)) {
+    if (!isChoice(payload.choice)) {
       client.send(ServerMessage.Error, { message: "Invalid choice" });
       return;
     }
+    const choice = payload.choice;
 
     this.pendingChoices.set(client.sessionId, choice);
 
@@ -165,7 +187,7 @@ export class RPSRoom extends Room<RPSRoomState> {
   }
 
   private handlePlayAgain(client: Client) {
-    if (this.state.phase !== RoomPhase.MatchEnd) return;
+    if ((this.state.phase as RoomPhase) !== RoomPhase.MatchEnd) return;
     if (this.spectators.has(client.sessionId)) return;
 
     this.playAgainVotes.add(client.sessionId);

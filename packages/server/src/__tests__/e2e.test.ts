@@ -145,8 +145,8 @@ describe("RPS", () => {
       matchFormat: MatchFormat.BestOf3,
     });
 
-    const client1 = await colyseus.connectTo(room, { name: "Gina" });
-    const client2 = await colyseus.connectTo(room, { name: "Hank" });
+    const _client1 = await colyseus.connectTo(room, { name: "Gina" });
+    const _client2 = await colyseus.connectTo(room, { name: "Hank" });
     const spectator = await colyseus.connectTo(room, { name: "Spectator", spectate: true });
 
     await waitForPhase(room, RoomPhase.Choosing);

@@ -1,5 +1,8 @@
 import { Client, Room, type RoomAvailable } from "@colyseus/sdk";
 import type { MatchFormat } from "@rps/shared";
+import type { server } from "../../../server/src/app.config";
+import type { RPSLobbyRoom } from "../../../server/src/colyseus/rooms/rps-lobby.room";
+import type { RPSRoom } from "../../../server/src/colyseus/rooms/rps.room";
 
 const DEFAULT_BACKEND_HOST = "localhost:2567";
 
@@ -21,29 +24,20 @@ export const SERVER_HOST = normalizeHost(import.meta.env.VITE_SERVER_HOST);
 export const SERVER_HTTP_URL = `${resolveProtocol("http")}://${SERVER_HOST}`;
 export const SERVER_WS_URL = `${resolveProtocol("ws")}://${SERVER_HOST}`;
 
-type RoomMetadata = { roomName: string; matchFormat: number };
-type AvailableRoom = RoomAvailable<RoomMetadata>;
-type LobbyRoom = Room<{
-  messages: {
-    rooms: AvailableRoom[];
-    "+": [roomId: string, room: AvailableRoom];
-    "-": string;
-    lobby_count: number;
-  };
-}>;
+type AvailableRoom = RoomAvailable<RPSRoom["~metadata"]>;
 
 class NetworkManager {
-  private client: Client;
-  private room: Room | null = null;
-  private lobbyRoom: LobbyRoom | null = null;
-  private lobbyConnectPromise: Promise<LobbyRoom> | null = null;
+  private client: Client<typeof server>;
+  private room: Room<RPSRoom> | null = null;
+  private lobbyRoom: Room<RPSLobbyRoom> | null = null;
+  private lobbyConnectPromise: Promise<Room<RPSLobbyRoom>> | null = null;
   private availableRooms: AvailableRoom[] = [];
   private lobbyCount = 0;
   private lobbySubscribers = new Set<(rooms: AvailableRoom[]) => void>();
   private lobbyCountSubscribers = new Set<(count: number) => void>();
 
   constructor() {
-    this.client = new Client(SERVER_WS_URL);
+    this.client = new Client<typeof server>(SERVER_WS_URL);
   }
 
   async connectLobby() {
@@ -51,18 +45,18 @@ class NetworkManager {
     if (this.lobbyConnectPromise) return this.lobbyConnectPromise;
 
     this.lobbyConnectPromise = (async () => {
-      const lobby = await this.client.joinOrCreate("lobby", {
+      const lobby: Room<RPSLobbyRoom> = await this.client.joinOrCreate("lobby", {
         filter: {
           name: "rps",
         },
-      }) as LobbyRoom;
+      });
 
-      lobby.onMessage("rooms", (rooms) => {
+      lobby.onMessage("rooms", (rooms: AvailableRoom[]) => {
         this.availableRooms = [...rooms];
         this.notifyLobbySubscribers();
       });
 
-      lobby.onMessage("+", ([roomId, room]) => {
+      lobby.onMessage("+", ([roomId, room]: [string, AvailableRoom]) => {
         const index = this.availableRooms.findIndex((entry) => entry.roomId === roomId);
         if (index === -1) {
           this.availableRooms = [...this.availableRooms, room];
@@ -74,12 +68,12 @@ class NetworkManager {
         this.notifyLobbySubscribers();
       });
 
-      lobby.onMessage("-", (roomId) => {
+      lobby.onMessage("-", (roomId: string) => {
         this.availableRooms = this.availableRooms.filter((entry) => entry.roomId !== roomId);
         this.notifyLobbySubscribers();
       });
 
-      lobby.onMessage("lobby_count", (count) => {
+      lobby.onMessage("lobby_count", (count: number) => {
         this.lobbyCount = count;
         this.notifyLobbyCountSubscribers();
       });
@@ -152,7 +146,7 @@ class NetworkManager {
     return this.room;
   }
 
-  getRoom(): Room | null {
+  getRoom(): Room<RPSRoom> | null {
     return this.room;
   }
 

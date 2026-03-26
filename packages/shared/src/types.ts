@@ -31,6 +31,15 @@ export interface MatchResultPayload {
   player2Score: number;
 }
 
+export interface ErrorPayload {
+  message: string;
+}
+
+export interface RPSRoomMetadata {
+  roomName: string;
+  matchFormat: number;
+}
+
 export interface RoomCreateOptions {
   name: string;
   matchFormat: MatchFormat;

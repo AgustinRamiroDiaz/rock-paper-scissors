@@ -14,9 +14,11 @@
 import { cli, type Options } from "@colyseus/loadtest";
 import { Client, Callbacks } from "@colyseus/sdk";
 import type { Room } from "@colyseus/sdk";
-import { Choice, RoomPhase, ClientMessage, MatchFormat } from "@rps/shared";
+import { Choice, ClientMessage, MatchFormat } from "@rps/shared";
 
 const CHOICES = [Choice.Rock, Choice.Paper, Choice.Scissors];
+const CHOOSING_PHASE = "choosing";
+const MATCH_END_PHASE = "match_end";
 
 function randomChoice(): Choice {
   return CHOICES[Math.floor(Math.random() * CHOICES.length)];
@@ -60,14 +62,14 @@ async function playGame(room: Room) {
   let matchOver = false;
 
   $.listen("phase" as never, (phase: string) => {
-    if (phase === RoomPhase.MatchEnd) {
+    if (phase === MATCH_END_PHASE) {
       matchOver = true;
     }
 
-    if (phase === RoomPhase.Choosing && !matchOver) {
+    if (phase === CHOOSING_PHASE && !matchOver) {
       // Small random delay then choose
       void sleep(10 + Math.random() * 50).then(() => {
-        if (!matchOver && (state.phase as string) === RoomPhase.Choosing) {
+        if (!matchOver && (state.phase as string) === CHOOSING_PHASE) {
           room.send(ClientMessage.MakeChoice, { choice: randomChoice() });
         }
       });
@@ -75,11 +77,9 @@ async function playGame(room: Room) {
   });
 
   // If already in choosing phase (joined second), trigger immediately
-  if (state.phase === RoomPhase.Choosing) {
+  if (state.phase === CHOOSING_PHASE) {
     await sleep(10 + Math.random() * 50);
-    if (!matchOver) {
-      room.send(ClientMessage.MakeChoice, { choice: randomChoice() });
-    }
+    room.send(ClientMessage.MakeChoice, { choice: randomChoice() });
   }
 }
 
