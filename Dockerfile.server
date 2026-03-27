@@ -1,0 +1,24 @@
+# Multi-stage Dockerfile for server (dev and prod)
+
+# Base stage with minimal setup
+FROM oven/bun:1 AS base
+WORKDIR /app
+COPY package.json bun.lock ./
+COPY tsconfig.json tsconfig.base.json ./
+COPY packages/shared/package.json packages/shared/package.json
+COPY packages/server/package.json packages/server/package.json
+
+# Development stage - needs full source and all workspaces for monorepo
+FROM base AS dev
+RUN bun install
+COPY . .
+CMD ["bun", "run", "--filter", "server", "dev"]
+
+# Production stage
+FROM oven/bun:1 AS prod
+WORKDIR /app
+COPY package.json bun.lock ./
+COPY packages/server/package.json packages/server/package.json
+COPY packages/shared/package.json packages/shared/package.json
+RUN bun install
+CMD ["bun", "run", "packages/server/src/main.ts"]

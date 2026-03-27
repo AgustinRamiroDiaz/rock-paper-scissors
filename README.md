@@ -261,3 +261,26 @@ The **server** requires a platform that supports long-running WebSocket connecti
 - [Colyseus Cloud](https://cloud.colyseus.io)
 
 Serverless platforms (Vercel, AWS Lambda) will not work for the backend because Colyseus needs persistent WebSocket connections and in-memory game state.
+
+## Infrastructure
+
+The application is hosted on **Google Cloud Platform (GCP)** with the following setup:
+
+### Components
+
+| Component | Service | Purpose |
+|-----------|---------|---------|
+| Compute | GCP VM Instance | Runs the application via Dokploy |
+| Networking | GCP Firewall Rules | Controls inbound/outbound traffic to the VM |
+| DNS | GCP Cloud DNS | Manages DNS zone and DNS records for domain routing |
+| Deployment | [Dokploy](https://dokploy.io) | Handles CD (continuous deployment), reverse proxy, and SSL/TLS termination |
+
+### Dokploy
+
+[Dokploy](https://dokploy.io) is an open-source deployment platform installed and running on the GCP VM. It provides:
+
+- **Continuous Deployment (CD)**: Automatically builds and deploys the application from the Git repository
+- **Reverse Proxy**: Routes incoming requests to the correct services (client and server)
+- **SSL/TLS Handling**: Manages HTTPS certificates and encryption (likely via Let's Encrypt integration)
+
+The VM runs a single Dokploy instance that orchestrates all application services (client, server, and database).

@@ -4,5 +4,6 @@ bun.lockb
 *.tsbuildinfo
 .env
 .env.*
+!.env.example
 test-results/
 playwright-report/

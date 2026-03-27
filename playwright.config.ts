@@ -9,6 +9,9 @@ export default defineConfig({
     baseURL: "http://localhost:3001",
     headless: true,
   },
+  preview: {
+    port: 3001,
+  },
   projects: [
     {
       name: "chromium",
