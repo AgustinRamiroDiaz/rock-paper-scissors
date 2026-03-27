@@ -18,7 +18,11 @@ CMD ["bun", "run", "--filter", "server", "dev"]
 FROM oven/bun:1 AS prod
 WORKDIR /app
 COPY package.json bun.lock ./
-COPY packages/server/package.json packages/server/package.json
 COPY packages/shared/package.json packages/shared/package.json
+COPY packages/server/package.json packages/server/package.json
 RUN bun install
-CMD ["bun", "run", "packages/server/src/main.ts"]
+COPY packages/shared/src packages/shared/src
+COPY packages/server/src packages/server/src
+COPY tsconfig.json tsconfig.base.json ./
+RUN bun run --filter server build
+CMD ["bun", "run", "packages/server/dist/main.js"]
