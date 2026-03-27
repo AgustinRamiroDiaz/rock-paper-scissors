@@ -16,9 +16,10 @@ CMD ["bun", "run", "--filter", "client", "dev", "--host", "0.0.0.0"]
 
 # Build stage - compile the client
 FROM base AS build
+ARG VITE_SERVER_HOST=rps-server.agustinramirodiaz.dev
 RUN bun install
 COPY . .
-RUN bun run --filter client build
+RUN VITE_SERVER_HOST=$VITE_SERVER_HOST bun run --filter client build
 
 # Production stage - serve built dist folder with nginx
 FROM nginx:alpine AS prod
