@@ -46,18 +46,31 @@ function submit() {
 <style scoped>
 .name-entry {
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
 }
 
 .title {
-  font-size: 48px;
-  color: #e94560;
-  margin-bottom: 8px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(28px, 8vw, 48px);
+  font-weight: 900;
+  color: var(--neon-pink, #ff2d6a);
+  text-shadow: 0 0 20px rgba(255, 45, 106, 0.5);
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
 }
 
 .subtitle {
-  font-size: 24px;
-  color: #16213e;
-  margin-bottom: 48px;
+  font-size: clamp(16px, 4vw, 24px);
+  color: var(--neon-cyan, #00f0ff);
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  margin-bottom: 40px;
+  opacity: 0.8;
 }
 
 .form {
@@ -65,46 +78,86 @@ function submit() {
   flex-direction: column;
   align-items: center;
   gap: 16px;
+  width: 100%;
+  max-width: 320px;
 }
 
 .input {
-  font-size: 20px;
-  padding: 10px 20px;
-  border: 2px solid #e94560;
-  border-radius: 8px;
-  background: #16213e;
+  font-size: 18px;
+  padding: 14px 20px;
+  border: 2px solid var(--neon-pink, #ff2d6a);
+  border-radius: 12px;
+  background: rgba(22, 33, 62, 0.9);
   color: #ffffff;
   text-align: center;
   outline: none;
-  font-family: monospace;
-  width: 280px;
+  font-family: 'IBM Plex Mono', monospace;
+  width: 100%;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .input.error {
   border-color: #ff0000;
+  animation: shake 0.4s ease;
 }
 
 .input:focus {
-  border-color: #ff6b81;
+  border-color: var(--neon-cyan, #00f0ff);
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.3);
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
 }
 
 .btn {
-  padding: 12px 40px;
+  padding: 14px 48px;
   border: none;
-  border-radius: 8px;
-  font-size: 18px;
-  font-family: monospace;
-  font-weight: bold;
+  border-radius: 12px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
 }
 
 .btn-primary {
-  background: #e94560;
+  background: linear-gradient(135deg, var(--neon-pink, #ff2d6a), #ff6b81);
   color: #ffffff;
+  box-shadow: 0 4px 20px rgba(255, 45, 106, 0.4);
 }
 
 .btn-primary:hover {
-  background: #ff6b81;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(255, 45, 106, 0.6);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 480px) {
+  .title {
+    margin-bottom: 2px;
+  }
+
+  .subtitle {
+    margin-bottom: 32px;
+  }
+
+  .input {
+    font-size: 16px;
+    padding: 12px 16px;
+  }
+
+  .btn {
+    padding: 12px 36px;
+    font-size: 14px;
+    width: 100%;
+  }
 }
 </style>

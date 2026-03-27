@@ -320,15 +320,15 @@ function updatePlayers(state: RoomStateView) {
 .player-info { display: flex; flex-direction: column; gap: 2px; }
 .player-info.right { text-align: right; }
 .player-name { font-weight: bold; font-size: 18px; }
-.player-name.p1 { color: #e94560; }
-.player-name.p2 { color: #533483; }
+.player-name.p1 { color: var(--neon-pink, #ff2d6a); }
+.player-name.p2 { color: var(--neon-cyan, #00f0ff); }
 .score { font-size: 14px; color: #ccc; }
 .round-info { font-size: 20px; font-weight: bold; }
 
 .banner {
   text-align: center;
   background: #333;
-  color: #ffcc00;
+  color: var(--neon-amber, #ffd426);
   padding: 8px;
   margin-top: 8px;
   border-radius: 8px;
@@ -347,6 +347,7 @@ function updatePlayers(state: RoomStateView) {
 .phase-text {
   font-size: 24px;
   color: #ccc;
+  text-align: center;
 }
 
 .choices {
@@ -405,19 +406,21 @@ function updatePlayers(state: RoomStateView) {
   margin-top: 16px;
 }
 
-.round-result.win { color: #53cf8a; }
-.round-result.lose { color: #e94560; }
-.round-result.draw { color: #ffcc00; }
+.round-result.win { color: var(--neon-green, #00ff88); }
+.round-result.lose { color: var(--neon-pink, #ff2d6a); }
+.round-result.draw { color: var(--neon-amber, #ffd426); }
 
 .match-end { text-align: center; }
 
 .match-result {
   font-size: 48px;
   margin-bottom: 16px;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 900;
 }
 
-.match-result.win { color: #53cf8a; }
-.match-result.lose { color: #e94560; }
+.match-result.win { color: var(--neon-green, #00ff88); text-shadow: 0 0 30px rgba(0, 255, 136, 0.5); }
+.match-result.lose { color: var(--neon-pink, #ff2d6a); text-shadow: 0 0 30px rgba(255, 45, 106, 0.5); }
 
 .final-score {
   font-size: 24px;
@@ -437,7 +440,7 @@ function updatePlayers(state: RoomStateView) {
   padding: 12px 0;
 }
 
-.spectating-label { color: #ffcc00; font-weight: bold; margin-left: auto; }
+.spectating-label { color: var(--neon-amber, #ffd426); font-weight: bold; margin-left: auto; }
 .spectator-count { color: #8899aa; margin-left: auto; }
 
 .btn {
@@ -453,8 +456,157 @@ function updatePlayers(state: RoomStateView) {
 
 .btn:hover { opacity: 0.8; }
 .btn:disabled { opacity: 0.5; cursor: default; }
-.btn-green { background: #53cf8a; color: #fff; }
+.btn-green { background: var(--neon-green, #00ff88); color: #000; }
 .btn-dark { background: #0f3460; color: #fff; }
-.btn-danger { background: #e94560; color: #fff; }
+.btn-danger { background: var(--neon-pink, #ff2d6a); color: #fff; }
 .btn-small { padding: 6px 16px; font-size: 13px; }
+
+/* Mobile styles */
+@media (max-width: 640px) {
+  .game {
+    padding: 0 12px;
+  }
+
+  .top-bar {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-radius: 0 0 8px 8px;
+  }
+
+  .player-info {
+    flex: 1;
+    min-width: 100px;
+  }
+
+  .player-info.right {
+    text-align: right;
+  }
+
+  .player-name {
+    font-size: 14px;
+  }
+
+  .score {
+    font-size: 12px;
+  }
+
+  .round-info {
+    font-size: 16px;
+    order: -1;
+    width: 100%;
+    text-align: center;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 4px;
+  }
+
+  .main-area {
+    padding: 24px 0;
+    gap: 16px;
+  }
+
+  .phase-text {
+    font-size: 18px;
+    padding: 0 12px;
+  }
+
+  .choices {
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .choice-btn {
+    padding: 16px 20px;
+    flex: 1 1 calc(33% - 8px);
+    max-width: 140px;
+    min-width: 90px;
+  }
+
+  .choice-icon {
+    font-size: 36px;
+  }
+
+  .choice-label {
+    font-size: 11px;
+  }
+
+  .reveal-area {
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+  }
+
+  .reveal-side {
+    width: 100%;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+  }
+
+  .reveal-icon {
+    font-size: 48px;
+  }
+
+  .vs {
+    font-size: 28px;
+    padding: 8px 0;
+  }
+
+  .round-result {
+    font-size: 20px;
+  }
+
+  .match-result {
+    font-size: 32px;
+  }
+
+  .final-score {
+    font-size: 18px;
+  }
+
+  .match-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .match-actions .btn {
+    width: 100%;
+  }
+
+  .bottom-bar {
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .spectating-label,
+  .spectator-count {
+    margin-left: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 400px) {
+  .choice-btn {
+    padding: 12px 14px;
+  }
+
+  .choice-icon {
+    font-size: 28px;
+  }
+
+  .choice-label {
+    font-size: 10px;
+  }
+
+  .match-result {
+    font-size: 26px;
+  }
+}
 </style>

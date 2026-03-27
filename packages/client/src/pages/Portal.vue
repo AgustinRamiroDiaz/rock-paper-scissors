@@ -46,8 +46,23 @@ const playerName = ref(getPlayerName());
     linear-gradient(135deg, rgba(14, 27, 52, 0.95), rgba(8, 15, 29, 0.98));
 }
 
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 240, 255, 0.02) 2px,
+    rgba(0, 240, 255, 0.02) 4px
+  );
+  pointer-events: none;
+  border-radius: 30px;
+}
+
 .hero-kicker {
-  color: rgba(255, 214, 122, 0.78);
+  color: var(--neon-amber, #ffd426);
   font-size: 12px;
   letter-spacing: 0.24em;
   text-transform: uppercase;
@@ -55,9 +70,13 @@ const playerName = ref(getPlayerName());
 
 .hero-title {
   margin-top: 10px;
-  font-size: clamp(42px, 8vw, 78px);
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(32px, 8vw, 78px);
+  font-weight: 900;
   line-height: 0.94;
   color: #fff6d6;
+  text-shadow: 0 0 40px rgba(255, 214, 122, 0.3);
+  letter-spacing: 0.02em;
 }
 
 .hero-copy {
@@ -82,12 +101,45 @@ const playerName = ref(getPlayerName());
 }
 
 @media (max-width: 640px) {
+  .portal {
+    gap: 20px;
+  }
+
   .hero {
-    padding: 26px 22px;
+    padding: 24px 20px;
+    border-radius: 20px;
+  }
+
+  .hero-kicker {
+    font-size: 10px;
+  }
+
+  .hero-title {
+    line-height: 1;
   }
 
   .hero-copy {
-    font-size: 15px;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-top: 10px;
+  }
+
+  .portal-grid {
+    gap: 16px;
+  }
+}
+
+@media (max-width: 400px) {
+  .hero {
+    padding: 20px 16px;
+  }
+
+  .hero-title {
+    font-size: 28px;
+  }
+
+  .hero-copy {
+    font-size: 13px;
   }
 }
 </style>

@@ -122,8 +122,11 @@ async function joinRoom(roomId: string, spectate: boolean) {
 }
 
 .title {
-  font-size: 36px;
-  color: #e94560;
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(28px, 8vw, 36px);
+  color: var(--neon-pink, #ff2d6a);
+  text-shadow: 0 0 20px rgba(255, 45, 106, 0.4);
+  letter-spacing: 0.05em;
 }
 
 .player-name {
@@ -162,8 +165,8 @@ async function joinRoom(roomId: string, spectate: boolean) {
   font-size: 14px;
 }
 
-.player-count.open { color: #53cf8a; }
-.player-count.full { color: #e94560; }
+.player-count.open { color: var(--neon-green, #00ff88); }
+.player-count.full { color: var(--neon-pink, #ff2d6a); }
 
 .actions {
   display: flex;
@@ -184,10 +187,10 @@ async function joinRoom(roomId: string, spectate: boolean) {
 
 .btn:hover { opacity: 0.8; }
 
-.btn-primary { background: #e94560; color: #fff; }
+.btn-primary { background: var(--neon-pink, #ff2d6a); color: #fff; }
 .btn-secondary { background: #533483; color: #fff; }
 .btn-dark { background: #0f3460; color: #fff; }
-.btn-join { background: #53cf8a; color: #fff; }
+.btn-join { background: var(--neon-green, #00ff88); color: #000; }
 .btn-spectate { background: #533483; color: #fff; }
 .btn-small { padding: 6px 16px; font-size: 13px; }
 
@@ -199,11 +202,12 @@ async function joinRoom(roomId: string, spectate: boolean) {
   justify-content: center;
   align-items: center;
   z-index: 10;
+  padding: 16px;
 }
 
 .panel {
   background: #16213e;
-  border: 2px solid #e94560;
+  border: 2px solid var(--neon-pink, #ff2d6a);
   border-radius: 12px;
   padding: 32px;
   display: flex;
@@ -211,11 +215,13 @@ async function joinRoom(roomId: string, spectate: boolean) {
   align-items: center;
   gap: 12px;
   min-width: 300px;
+  max-width: 90vw;
 }
 
 .panel-title {
+  font-family: 'Orbitron', sans-serif;
   font-size: 24px;
-  color: #e94560;
+  color: var(--neon-pink, #ff2d6a);
   margin-bottom: 8px;
 }
 
@@ -237,5 +243,92 @@ async function joinRoom(roomId: string, spectate: boolean) {
   font-size: 14px;
   cursor: pointer;
   margin-top: 4px;
+}
+
+/* Mobile styles */
+@media (max-width: 640px) {
+  .lobby {
+    padding: 16px 12px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .title {
+    font-size: 26px;
+  }
+
+  .player-name {
+    font-size: 12px;
+  }
+
+  .room-list {
+    min-height: 250px;
+    margin-bottom: 20px;
+  }
+
+  .room-row {
+    flex-wrap: wrap;
+    padding: 14px 12px;
+    gap: 12px;
+  }
+
+  .room-info {
+    font-size: 15px;
+    width: 100%;
+    flex-basis: 100%;
+  }
+
+  .player-count {
+    font-size: 13px;
+  }
+
+  .room-row .btn-small {
+    flex: 1;
+    text-align: center;
+  }
+
+  .actions {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .actions .btn {
+    flex: 1 1 calc(50% - 5px);
+    min-width: 100px;
+    padding: 12px 16px;
+    font-size: 13px;
+    text-align: center;
+  }
+
+  .panel {
+    padding: 24px 20px;
+    min-width: unset;
+    width: 100%;
+  }
+
+  .panel-title {
+    font-size: 20px;
+  }
+
+  .btn-format {
+    padding: 14px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 400px) {
+  .room-info {
+    font-size: 14px;
+  }
+
+  .actions .btn {
+    font-size: 12px;
+    padding: 10px 12px;
+  }
 }
 </style>

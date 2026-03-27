@@ -213,7 +213,7 @@ async function joinRoom(roomId: string, spectate: boolean) {
 }
 
 .eyebrow {
-  color: rgba(248, 206, 85, 0.72);
+  color: var(--neon-amber, #ffd426);
   font-size: 11px;
   letter-spacing: 0.24em;
   text-transform: uppercase;
@@ -221,8 +221,10 @@ async function joinRoom(roomId: string, spectate: boolean) {
 
 .panel-title {
   margin-top: 8px;
+  font-family: 'Orbitron', sans-serif;
   font-size: 34px;
   color: #fff6d6;
+  font-weight: 700;
 }
 
 .lobby-presence {
@@ -305,11 +307,11 @@ async function joinRoom(roomId: string, spectate: boolean) {
 }
 
 .player-count.open {
-  color: #84f7c3;
+  color: var(--neon-green, #00ff88);
 }
 
 .player-count.full {
-  color: #ff9a80;
+  color: var(--neon-pink, #ff2d6a);
 }
 
 .row-action,
@@ -394,6 +396,7 @@ async function joinRoom(roomId: string, spectate: boolean) {
 }
 
 .create-title {
+  font-family: 'Orbitron', sans-serif;
   color: #fff8e1;
   font-size: 24px;
 }
@@ -420,35 +423,115 @@ async function joinRoom(roomId: string, spectate: boolean) {
 
 @media (max-width: 640px) {
   .panel {
-    padding: 22px;
+    padding: 20px;
+    border-radius: 20px;
   }
 
   .panel-head {
     flex-direction: column;
+    gap: 16px;
+  }
+
+  .panel-title {
+    font-size: 26px;
   }
 
   .player-chip {
     width: 100%;
+    justify-content: space-between;
   }
 
   .player-input {
     width: 100%;
+    flex: 1;
+    font-size: 15px;
+  }
+
+  .room-list {
+    min-height: 280px;
+    gap: 8px;
   }
 
   .room-row {
     grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .room-copy {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .room-name {
+    font-size: 16px;
+  }
+
+  .room-format {
+    font-size: 12px;
   }
 
   .player-count {
     text-align: left;
+    font-size: 12px;
+    min-width: unset;
+  }
+
+  .row-action {
+    width: 100%;
+    text-align: center;
+    padding: 12px;
   }
 
   .actions {
     flex-direction: column;
+    gap: 10px;
+  }
+
+  .primary-button,
+  .secondary-button {
+    padding: 14px 16px;
+    font-size: 14px;
+    text-align: center;
   }
 
   .format-grid {
     grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .create-panel {
+    padding: 20px;
+  }
+
+  .create-title {
+    font-size: 20px;
+  }
+
+  .format-button {
+    padding: 16px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 400px) {
+  .panel {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .panel-title {
+    font-size: 22px;
+  }
+
+  .room-name {
+    font-size: 14px;
+  }
+
+  .eyebrow {
+    font-size: 10px;
   }
 }
 </style>

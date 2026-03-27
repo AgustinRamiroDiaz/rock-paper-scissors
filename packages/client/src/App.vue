@@ -5,11 +5,17 @@
 </template>
 
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
 :root {
   color-scheme: dark;
   --page-bg: #07101f;
   --page-bg-soft: #112443;
   --text-main: #f7f2dd;
+  --neon-pink: #ff2d6a;
+  --neon-cyan: #00f0ff;
+  --neon-amber: #ffd426;
+  --neon-green: #00ff88;
 }
 
 * {
@@ -48,7 +54,14 @@ select {
 
 @media (max-width: 640px) {
   .app {
-    padding: 16px;
+    padding: 12px;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 400px) {
+  .app {
+    padding: 8px;
   }
 }
 </style>
