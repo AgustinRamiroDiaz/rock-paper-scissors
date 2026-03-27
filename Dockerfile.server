@@ -21,4 +21,6 @@ COPY package.json bun.lock ./
 COPY packages/server/package.json packages/server/package.json
 COPY packages/shared/package.json packages/shared/package.json
 RUN bun install
+COPY packages/server/src packages/server/src
+COPY packages/shared/src packages/shared/src 
 CMD ["bun", "run", "packages/server/src/main.ts"]
