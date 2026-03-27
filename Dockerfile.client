@@ -17,4 +17,4 @@ CMD ["bun", "run", "--filter", "client", "dev", "--host", "0.0.0.0"]
 # Production stage - build client, then serve static files
 FROM base AS prod
 RUN bun install
-ENTRYPOINT [ "bun", "run", "--filter", "client", "preview", "--port", "3001"]
+ENTRYPOINT [ "bun", "run", "--filter", "client", "preview", "--port", "3001", "--host", "0.0.0.0"]
