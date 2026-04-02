@@ -1,8 +1,12 @@
 import { Client, Room, type RoomAvailable } from "@colyseus/sdk";
 import type { MatchFormat } from "@rps/shared";
-import type { server } from "../../../server/src/app.config";
-import type { RPSLobbyRoom } from "../../../server/src/colyseus/rooms/rps-lobby.room";
-import type { RPSRoom } from "../../../server/src/colyseus/rooms/rps.room";
+import type { RPSRoomMetadata } from "@rps/shared";
+
+declare global {
+  interface Window {
+    __RPS_ROOM_ID?: string;
+  }
+}
 
 const DEFAULT_BACKEND_HOST = "localhost:2567";
 
@@ -13,31 +17,32 @@ function normalizeHost(value: string | undefined) {
 }
 
 function resolveProtocol(secure: "http" | "ws") {
+  const protocol = globalThis.location.protocol;
   if (secure === "http") {
-    return window.location.protocol === "https:" ? "https" : "http";
+    return protocol === "https:" ? "https" : "http";
   }
 
-  return window.location.protocol === "https:" ? "wss" : "ws";
+  return protocol === "https:" ? "wss" : "ws";
 }
 
 export const SERVER_HOST = normalizeHost(import.meta.env.VITE_SERVER_HOST);
 export const SERVER_HTTP_URL = `${resolveProtocol("http")}://${SERVER_HOST}`;
 export const SERVER_WS_URL = `${resolveProtocol("ws")}://${SERVER_HOST}`;
 
-type AvailableRoom = RoomAvailable<RPSRoom["~metadata"]>;
+type AvailableRoom = RoomAvailable<RPSRoomMetadata>;
 
 class NetworkManager {
-  private client: Client<typeof server>;
-  private room: Room<RPSRoom> | null = null;
-  private lobbyRoom: Room<RPSLobbyRoom> | null = null;
-  private lobbyConnectPromise: Promise<Room<RPSLobbyRoom>> | null = null;
+  private client: Client;
+  private room: Room | null = null;
+  private lobbyRoom: Room | null = null;
+  private lobbyConnectPromise: Promise<Room> | null = null;
   private availableRooms: AvailableRoom[] = [];
   private lobbyCount = 0;
   private lobbySubscribers = new Set<(rooms: AvailableRoom[]) => void>();
   private lobbyCountSubscribers = new Set<(count: number) => void>();
 
   constructor() {
-    this.client = new Client<typeof server>(SERVER_WS_URL);
+    this.client = new Client(SERVER_WS_URL);
   }
 
   async connectLobby() {
@@ -45,7 +50,7 @@ class NetworkManager {
     if (this.lobbyConnectPromise) return this.lobbyConnectPromise;
 
     this.lobbyConnectPromise = (async () => {
-      const lobby: Room<RPSLobbyRoom> = await this.client.joinOrCreate("lobby", {
+      const lobby = await this.client.joinOrCreate("lobby", {
         filter: {
           name: "rps",
         },
@@ -148,7 +153,7 @@ class NetworkManager {
     return this.room;
   }
 
-  getRoom(): Room<RPSRoom> | null {
+  getRoom(): Room | null {
     return this.room;
   }
 
@@ -183,7 +188,7 @@ class NetworkManager {
   }
 
   private publishCurrentRoomId() {
-    window.__RPS_ROOM_ID = this.room?.roomId;
+    globalThis.window.__RPS_ROOM_ID = this.room?.roomId;
   }
 }
 

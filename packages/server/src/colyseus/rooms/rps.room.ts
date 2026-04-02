@@ -10,31 +10,23 @@ import {
   ServerMessage,
   RoundResult,
   type MakeChoicePayload,
-  type MatchResultPayload,
-  type ErrorPayload,
   type RPSRoomMetadata,
   type RoomJoinOptions,
 } from "@rps/shared";
 import type { LeaderboardService } from "../../leaderboard/leaderboard.service";
 
-interface RPSClientMessages {
-  [ServerMessage.MatchResult]: MatchResultPayload;
-  [ServerMessage.Error]: ErrorPayload;
-  [ServerMessage.OpponentDisconnected]: Record<string, never>;
-  [ServerMessage.OpponentReconnected]: Record<string, never>;
-}
-
-interface RPSRoomOptions {
+interface RPSRoomTypes {
   state: RPSRoomState;
   metadata: RPSRoomMetadata;
-  client: Client<{ messages: RPSClientMessages }>;
+  client: Client;
 }
 
 function isChoice(value: string): value is Choice {
   return value === "rock" || value === "paper" || value === "scissors";
 }
 
-export class RPSRoom extends Room<RPSRoomOptions> {
+export class RPSRoom extends Room<RPSRoomTypes> {
+  state = new RPSRoomState();
   static leaderboardService: LeaderboardService | undefined;
 
   private pendingChoices = new Map<string, Choice>();

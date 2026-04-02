@@ -8,23 +8,24 @@
     "loadtest:small": "bun run loadtest/stress.ts --room rps --numClients 100 --endpoint ws://localhost:2567"
   },
   "dependencies": {
-    "@colyseus/bun-websockets": "^0.17.0",
-    "@colyseus/drizzle-driver": "^0.17.0",
-    "@colyseus/monitor": "^0.17.7",
-    "@colyseus/schema": "^3.0.0",
-    "@nestjs/common": "^11.0.0",
-    "@nestjs/core": "^11.0.0",
-    "@nestjs/platform-express": "^11.0.0",
-    "colyseus": "^0.17.0",
-    "reflect-metadata": "^0.2.0",
-    "rxjs": "^7.8.0"
+    "@colyseus/bun-websockets": "^0.17.11",
+    "@colyseus/core": "0.17.39",
+    "@colyseus/drizzle-driver": "^0.17.7",
+    "@colyseus/monitor": "^0.17.8",
+    "@colyseus/schema": "4",
+    "@nestjs/common": "^11.1.17",
+    "@nestjs/core": "^11.1.17",
+    "@nestjs/platform-express": "^11.1.17",
+    "colyseus": "^0.17.8",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "@colyseus/loadtest": "^0.17.8",
-    "@colyseus/sdk": "^0.17.35",
+    "@colyseus/sdk": "^0.17.36",
     "@colyseus/testing": "^0.17.11",
     "@rps/shared": "workspace:*",
-    "@types/express": "^5.0.0",
-    "typescript": "^5.7.0"
+    "@types/express": "^5.0.6",
+    "typescript": "5.7"
   }
 }

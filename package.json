@@ -16,16 +16,17 @@
     "precommit": "bun run lint && bun run test && bun run test:e2e"
   },
   "devDependencies": {
-    "@colyseus/sdk": "^0.17.35",
-    "@playwright/test": "^1.58.2",
-    "@typescript-eslint/eslint-plugin": "^8.57.2",
-    "@typescript-eslint/parser": "^8.57.2",
-    "bun-types": "^1.3.2",
+    "@colyseus/sdk": "^0.17.36",
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^25.5.0",
+    "@typescript-eslint/eslint-plugin": "^8.58.0",
+    "@typescript-eslint/parser": "^8.58.0",
+    "bun-types": "^1.3.11",
     "eslint": "^10.1.0",
     "eslint-plugin-vue": "^10.8.0",
     "husky": "^9.1.7",
     "jiti": "^2.6.1",
-    "typescript-eslint": "^8.57.2",
+    "typescript-eslint": "^8.58.0",
     "vue-eslint-parser": "^10.4.0"
   }
 }

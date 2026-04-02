@@ -11,8 +11,9 @@ import {
   ClientMessage,
   MatchFormat,
 } from "@rps/shared";
+import type { Room } from "colyseus";
 
-let colyseus: ColyseusTestServer | undefined;
+let colyseus: ColyseusTestServer;
 let leaderboardService: LeaderboardService;
 
 function assertDefined<T>(value: T | null | undefined, message: string): T {
@@ -53,19 +54,15 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  if (colyseus) {
-    await colyseus.shutdown();
-  }
+  await colyseus.shutdown();
 });
 
 beforeEach(async () => {
-  if (colyseus) {
-    await colyseus.cleanup();
-  }
+  await colyseus.cleanup();
 });
 
 /** Wait until server room state reaches a given phase */
-async function waitForPhase(room: RPSRoom, phase: string, timeoutMs = 15000) {
+async function waitForPhase(room: Room<{ state: { phase: string } }>, phase: string, timeoutMs = 15000) {
   const start = Date.now();
   while (room.state.phase !== phase) {
     if (Date.now() - start > timeoutMs) {
