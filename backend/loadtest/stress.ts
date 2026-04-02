@@ -7,8 +7,8 @@
  *
  * Usage:
  *   cd packages/server
- *   bun run loadtest          # 20k clients → 10k concurrent games
- *   bun run loadtest:small    # 100 clients → 50 concurrent games
+ *   npm run loadtest          # 20k clients → 10k concurrent games
+ *   npm run loadtest:small    # 100 clients → 50 concurrent games
  */
 
 import { cli, type Options } from "@colyseus/loadtest";

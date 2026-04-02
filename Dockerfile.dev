@@ -1,13 +1,15 @@
-FROM oven/bun:1
+FROM node:23-alpine
+
+RUN npm install -g npm@latest
 
 WORKDIR /app
 
-COPY package.json bun.lock ./
+COPY package.json package-lock.json ./
 COPY tsconfig.json tsconfig.base.json ./
 COPY packages/client/package.json packages/client/package.json
 COPY packages/server/package.json packages/server/package.json
 COPY packages/shared/package.json packages/shared/package.json
 
-RUN bun install
+RUN npm install --legacy-peer-deps
 
-CMD ["bun", "run", "dev"]
+CMD ["npm", "run", "dev"]

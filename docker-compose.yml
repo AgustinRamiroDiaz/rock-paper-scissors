@@ -19,10 +19,9 @@ services:
 
   server:
     build:
-      context: .
-      dockerfile: Dockerfile.server
+      context: ./backend
+      dockerfile: Dockerfile
       target: ${SERVER_STAGE:-prod}
-    working_dir: /app
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/postgres
       PORT: "2567"
@@ -31,27 +30,22 @@ services:
         condition: service_healthy
     ports:
       - "2567:2567"
-    volumes:
-      - .:/app
     restart: unless-stopped
 
   client:
     build:
-      context: .
-      dockerfile: Dockerfile.client
-      target: ${CLIENT_STAGE:-prod}
+      context: ./frontend
+      dockerfile: Dockerfile
       args:
-        VITE_SERVER_HOST: ${VITE_SERVER_HOST:-rps-server.agustinramirodiaz.dev}
-    working_dir: /app
+        VITE_SERVER_HOST: ${VITE_SERVER_HOST:-localhost:2567}
     depends_on:
       - server
     ports:
       - "3001:3001"
-    volumes:
-      - .:/app
     restart: unless-stopped
     environment:
-      VITE_SERVER_HOST: ${VITE_SERVER_HOST:-rps-server.agustinramirodiaz.dev}
+      VITE_SERVER_HOST: ${VITE_SERVER_HOST:-localhost:2567}
 
 volumes:
   postgres-data:
+

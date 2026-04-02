@@ -13,15 +13,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: "22"
+          cache: "npm"
 
-      - run: bun install
+      - run: npm install --legacy-peer-deps
 
       - name: Run unit tests
         working-directory: packages/server
-        run: bun test src/__tests__/e2e.test.ts
+        run: npm test
 
   e2e-tests:
     name: Playwright E2E
@@ -43,20 +44,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: "22"
+          cache: "npm"
 
-      - run: bun install
+      - run: npm install --legacy-peer-deps
 
       - name: Install Playwright browsers
-        run: bunx playwright install chromium --with-deps
+        run: npx playwright install chromium --with-deps
 
       - name: Start backend
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
         run: |
-          nohup bun run dev:server > /tmp/server.log 2>&1 &
+          nohup npm run dev:server > /tmp/server.log 2>&1 &
 
       - name: Wait for backend
         run: |
@@ -74,7 +76,7 @@ jobs:
         env:
           VITE_SERVER_HOST: localhost:2567
         run: |
-          nohup bun run dev:client > /tmp/client.log 2>&1 &
+          nohup npm run dev:client > /tmp/client.log 2>&1 &
 
       - name: Wait for frontend
         run: |
@@ -89,7 +91,7 @@ jobs:
           exit 1
 
       - name: Run Playwright tests
-        run: bun run test:e2e
+        run: npm run test:e2e
 
       - name: Upload test results
         if: always()

@@ -3,4 +3,4 @@
 set -eu
 
 echo "Running pre-commit checks (lint + unit + e2e)..."
-bun run precommit
+npm run precommit

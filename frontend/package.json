@@ -1,10 +1,14 @@
 {
-  "name": "client",
+  "name": "rps-client",
   "version": "0.1.0",
+  "description": "Rock Paper Scissors - Multiplayer Client",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "echo 'No tests for client'",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@colyseus/sdk": "^0.17.35",
@@ -12,9 +16,12 @@
     "vue-router": "^5.0.4"
   },
   "devDependencies": {
-    "@rps/shared": "workspace:*",
+    "@playwright/test": "^1.58.2",
     "@vitejs/plugin-vue": "^6.0.5",
     "typescript": "^5.7.0",
     "vite": "^6.0.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
   }
 }

@@ -1,7 +1,6 @@
 import "reflect-metadata";
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import { describe, test, expect, beforeAll, afterAll, beforeEach } from "node:test";
 import { Server } from "colyseus";
-import { BunWebSockets } from "@colyseus/bun-websockets";
 import { ColyseusTestServer } from "@colyseus/testing";
 import { RPSRoom } from "../colyseus/rooms/rps.room";
 import { LeaderboardService } from "../leaderboard/leaderboard.service";
@@ -45,7 +44,7 @@ beforeAll(async () => {
   leaderboardService = new LeaderboardService();
   RPSRoom.leaderboardService = leaderboardService;
 
-  const server = new Server({ transport: new BunWebSockets(), greet: false });
+  const server = new Server({ greet: false });
   server.define("rps", RPSRoom);
 
   await startServerWithRetry(server);

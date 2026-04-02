@@ -1,0 +1,36 @@
+{
+  "name": "rps-server",
+  "version": "0.1.0",
+  "description": "Rock Paper Scissors - Multiplayer Server",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx --watch src/main.ts",
+    "build": "tsc",
+    "loadtest": "npx tsx loadtest/stress.ts --room rps --numClients 20000 --endpoint ws://localhost:2567",
+    "loadtest:small": "npx tsx loadtest/stress.ts --room rps --numClients 100 --endpoint ws://localhost:2567",
+    "test": "node --test src/__tests__"
+  },
+  "dependencies": {
+    "@colyseus/drizzle-driver": "^0.17.0",
+    "@colyseus/monitor": "^0.17.7",
+    "@colyseus/schema": "^3.0.0",
+    "@nestjs/common": "^10.4.22",
+    "@nestjs/core": "^10.4.22",
+    "@nestjs/platform-express": "^10.4.22",
+    "colyseus": "^0.17.0",
+    "express": "^4.22.1",
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.8.0"
+  },
+  "devDependencies": {
+    "@colyseus/loadtest": "^0.17.8",
+    "@colyseus/sdk": "^0.17.35",
+    "@colyseus/testing": "^0.17.11",
+    "@types/express": "^4.17.25",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

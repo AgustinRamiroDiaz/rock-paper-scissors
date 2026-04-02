@@ -1,25 +1,30 @@
-# Multi-stage Dockerfile for server (dev and prod)
+# Multi-stage Dockerfile for client (dev and prod)
 
 # Base stage with minimal setup
-FROM oven/bun:1 AS base
+FROM node:23-alpine AS base
+RUN npm install -g npm@latest
 WORKDIR /app
-COPY package.json bun.lock ./
-COPY tsconfig.json tsconfig.base.json ./
-COPY packages/client/package.json packages/client/package.json
-COPY packages/shared/package.json packages/shared/package.json
 
 # Development stage - needs full source and all workspaces for monorepo
 FROM base AS dev
-RUN bun install
+COPY package.json package-lock.json ./
+COPY tsconfig.json tsconfig.base.json ./
+COPY packages/client/package.json packages/client/package.json
+COPY packages/shared/package.json packages/shared/package.json
+RUN npm install --legacy-peer-deps
 COPY . .
-CMD ["bun", "run", "--filter", "client", "dev", "--host", "0.0.0.0"]
+CMD ["npm", "run", "-w", "client", "dev", "--", "--host", "0.0.0.0"]
 
 # Build stage - compile the client
 FROM base AS build
 ARG VITE_SERVER_HOST=rps-server.agustinramirodiaz.dev
-RUN bun install
+COPY package.json package-lock.json ./
+COPY tsconfig.json tsconfig.base.json ./
+COPY packages/client/package.json packages/client/package.json
+COPY packages/shared/package.json packages/shared/package.json
+RUN npm ci --legacy-peer-deps
 COPY . .
-RUN VITE_SERVER_HOST=$VITE_SERVER_HOST bun run --filter client build
+RUN VITE_SERVER_HOST=$VITE_SERVER_HOST npm run -w client build
 
 # Production stage - serve built dist folder with nginx
 FROM nginx:alpine AS prod

@@ -4,7 +4,8 @@ import { ExpressAdapter } from "@nestjs/platform-express";
 import { PostgresDriver } from "@colyseus/drizzle-driver";
 import { AppModule } from "./app.module";
 import { monitor, Server } from "colyseus";
-import { BunWebSockets } from "@colyseus/bun-websockets";
+import { createServer } from "http";
+import express from "express";
 import { RPSLobbyRoom } from "./colyseus/rooms/rps-lobby.room";
 import { RPSRoom } from "./colyseus/rooms/rps.room";
 import { LeaderboardService } from "./leaderboard/leaderboard.service";
@@ -13,12 +14,10 @@ async function bootstrap() {
   const port = parseInt(process.env.PORT ?? "2567", 10);
   const databaseUrl = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:5432/postgres";
 
-  // BunWebSockets must own `Bun.serve()` for WebSocket upgrades,
-  // so we extract its Express app and mount NestJS on it.
-  const transport = new BunWebSockets();
-  const expressApp = transport.getExpressApp();
+  const expressApp = express();
+  const httpServer = createServer(expressApp);
 
-  // Initialize NestJS on the shared Express instance
+  // Initialize NestJS on Express
   const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
   app.enableCors();
   app.use("/monitor", monitor());
@@ -28,9 +27,9 @@ async function bootstrap() {
 
   await app.init();
 
-  // Start Colyseus with the transport (handles WebSocket + HTTP listening)
+  // Start Colyseus with the HTTP server
   const gameServer = new Server({
-    transport,
+    server: httpServer,
     greet: false,
     driver: new PostgresDriver(),
   });

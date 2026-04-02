@@ -6,14 +6,14 @@ A real-time multiplayer Rock Paper Scissors game with an authoritative server, l
 
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
-| Runtime | [Bun](https://bun.sh) | JavaScript runtime, package manager, test runner |
+| Runtime | [Node.js](https://nodejs.org) | JavaScript runtime, package manager, test runner |
 | Backend | [NestJS 11](https://nestjs.com) | HTTP framework, dependency injection, REST API |
 | Realtime | [Colyseus 0.17](https://colyseus.io) | Authoritative game server, WebSocket rooms, state sync |
 | Frontend | [Vue 3](https://vuejs.org) + [Vue Router](https://router.vuejs.org) | SPA with reactive UI |
 | Client SDK | [@colyseus/sdk](https://www.npmjs.com/package/@colyseus/sdk) | WebSocket client, room state synchronization |
 | Build | [Vite](https://vitejs.dev) | Frontend dev server and bundler |
 | Linting | [ESLint 10](https://eslint.org) + [typescript-eslint](https://typescript-eslint.io) | Strict TypeScript linting |
-| Testing | [Bun test](https://bun.sh/docs/cli/test) + [@colyseus/testing](https://docs.colyseus.io/tools/unit-testing) | Server unit tests |
+| Testing | [Node test](https://nodejs.org/api/test.html) + [@colyseus/testing](https://docs.colyseus.io/tools/unit-testing) | Server unit tests |
 | E2E Testing | [Playwright](https://playwright.dev) | Browser-based end-to-end tests |
 
 ## Architecture
@@ -30,14 +30,14 @@ rock-paper-scissors/
 └── .github/workflows/   # CI pipeline
 ```
 
-The project uses **Bun workspaces** so all three packages share a single `node_modules` and the `@rps/shared` package is resolved from source (no build step needed).
+The project uses **npm workspaces** so all three packages share a single `node_modules` and the `@rps/shared` package is resolved from source (no build step needed).
 
 ### Server Architecture
 
 ```
 bootstrap()
 │
-├─ BunWebSockets transport      Creates Bun.serve() for WebSocket upgrades
+├─ Express transport            Handles WebSocket upgrades
 │   └─ Express app               Shared between NestJS and Colyseus
 │
 ├─ NestJS                        Primary framework
@@ -58,7 +58,7 @@ bootstrap()
 └─ NestJS routes                 Leaderboard + monitor
 ```
 
-NestJS initializes first and mounts on the Express app. Colyseus then starts the `BunWebSockets` transport which owns `Bun.serve()` — this is required because Bun's WebSocket API needs the upgrade to happen inside its `fetch` handler.
+NestJS initializes first and mounts on the Express app. Colyseus uses the Express transport for WebSocket upgrades.
 
 ### Game Flow
 
@@ -85,12 +85,13 @@ The client connects directly to the backend (no proxy). Room state changes are o
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) (latest)
+- [Node.js](https://nodejs.org) 22 or later
+- [npm](https://npmjs.com) (comes with Node.js)
 
 ### Install
 
 ```bash
-bun install
+npm install --force
 ```
 
 ### Start PostgreSQL
@@ -120,14 +121,14 @@ This starts:
 Start both server and client:
 
 ```bash
-bun run dev
+npm run dev
 ```
 
 Or separately:
 
 ```bash
-bun run dev:server   # http://localhost:2567
-bun run dev:client   # http://localhost:3001
+npm run dev:server   # http://localhost:2567
+npm run dev:client   # http://localhost:3001
 ```
 
 Then open http://localhost:3001 in two browser tabs to play.
@@ -144,13 +145,13 @@ Uses `@colyseus/testing` to spin up a test Colyseus server and simulate game roo
 
 ```bash
 cd packages/server
-bun test
+npm test
 ```
 
 Or from the repo root:
 
 ```bash
-bun run test
+npm run test
 ```
 
 Tests cover: full Bo3 match, play again, disconnect forfeit, spectator join, draw rounds.
@@ -162,13 +163,13 @@ The frontend, backend, and PostgreSQL must already be running before you execute
 
 ```bash
 # Install browser (first time only)
-bunx playwright install chromium --with-deps
+npx playwright install chromium --with-deps
 
 # Start the app stack first
 docker compose up -d postgres server client
 
 # Run tests against the running services
-bun run test:e2e
+npm run test:e2e
 ```
 
 ## Git Hooks
@@ -178,7 +179,7 @@ This repo uses a tracked `pre-commit` hook in `.husky/pre-commit` to block commi
 Install hooks for your clone:
 
 ```bash
-bun install
+npm install
 ```
 
 That runs the root `prepare` script (`husky`), which sets Git's `core.hooksPath` to Husky's hook directory.
@@ -186,7 +187,7 @@ That runs the root `prepare` script (`husky`), which sets Git's `core.hooksPath`
 You can also configure it manually:
 
 ```bash
-bun run prepare
+npm run prepare
 ```
 
 ### Load Test (Stress Test)
@@ -195,14 +196,14 @@ Uses [@colyseus/loadtest](https://docs.colyseus.io/tools/loadtest) to simulate t
 
 ```bash
 # Start the server first
-bun run dev:server
+npm run dev:server
 
 # Quick smoke test: 50 concurrent games (100 clients)
 cd packages/server
-bun run loadtest:small
+npm run loadtest:small
 
 # Full stress test: 10k concurrent games (20k clients)
-bun run loadtest
+npm run loadtest
 ```
 
 The loadtest displays a live TUI dashboard showing connected/disconnected clients, bytes sent/received, and memory/CPU usage. Results are written to a log file.
@@ -210,14 +211,14 @@ The loadtest displays a live TUI dashboard showing connected/disconnected client
 ### Linting
 
 ```bash
-bun run lint        # Check
-bun run lint:fix    # Auto-fix
+npm run lint        # Check
+npm run lint:fix    # Auto-fix
 ```
 
 ### Type Checking
 
 ```bash
-bun run typecheck
+npm run typecheck
 ```
 
 ## API Endpoints
