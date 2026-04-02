@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for server (dev and prod)
 
 # Build stage - install all dependencies with symlinks (for proper Node.js resolution)
-FROM oven/bun:1 AS builder
+FROM oven/bun:1.3 AS builder
 WORKDIR /app
 COPY package.json bun.lock ./
 COPY tsconfig.json tsconfig.base.json ./
