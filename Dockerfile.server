@@ -10,7 +10,7 @@ COPY packages/server/package.json packages/server/package.json
 
 # Development stage - needs full source and all workspaces for monorepo
 FROM base AS dev
-RUN bun install
+RUN bun install --frozen-lockfile
 COPY . .
 CMD ["bun", "run", "--filter", "server", "dev"]
 
@@ -20,7 +20,8 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY packages/server/package.json packages/server/package.json
 COPY packages/shared/package.json packages/shared/package.json
-RUN bun install
+# Clear any stale cache and install fresh
+RUN rm -rf ~/.bun/install/cache/* && bun install
 COPY packages/server/src packages/server/src
-COPY packages/shared/src packages/shared/src 
+COPY packages/shared/src packages/shared/src
 CMD ["bun", "run", "packages/server/src/main.ts"]
