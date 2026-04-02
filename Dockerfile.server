@@ -1,23 +1,24 @@
 # Multi-stage Dockerfile for server (dev and prod)
 
-# Build stage - install all dependencies
+# Build stage - install all dependencies with symlinks (for proper Node.js resolution)
 FROM oven/bun:1 AS builder
 WORKDIR /app
 COPY package.json bun.lock ./
 COPY tsconfig.json tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/package.json
 COPY packages/server/package.json packages/server/package.json
-RUN bun install
+RUN bun install --backend=symlink
 
 # Development stage - needs full source and all workspaces for monorepo
 FROM builder AS dev
 COPY . .
 CMD ["bun", "run", "--filter", "server", "dev"]
 
-# Production stage - copy node_modules from builder
+# Production stage - copy node_modules from builder (with symlinks)
 FROM oven/bun:1 AS prod
 WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
+COPY bun.lock ./
 COPY packages/server/src packages/server/src
 COPY packages/shared/src packages/shared/src
 EXPOSE 2567
