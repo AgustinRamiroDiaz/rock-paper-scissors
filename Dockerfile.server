@@ -24,4 +24,7 @@ COPY packages/shared/package.json packages/shared/package.json
 RUN rm -rf ~/.bun/install/cache/* && bun install
 COPY packages/server/src packages/server/src
 COPY packages/shared/src packages/shared/src
+EXPOSE 2567
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD bun -e "const r = await fetch('http://localhost:${PORT:-2567}/monitor'); process.exit(r.ok ? 0 : 1)"
 CMD ["bun", "run", "packages/server/src/main.ts"]
