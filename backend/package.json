@@ -8,7 +8,7 @@
     "build": "tsc",
     "loadtest": "npx tsx loadtest/stress.ts --room rps --numClients 20000 --endpoint ws://localhost:2567",
     "loadtest:small": "npx tsx loadtest/stress.ts --room rps --numClients 100 --endpoint ws://localhost:2567",
-    "test": "node --test src/__tests__"
+    "test": "tsx --test src/__tests__/**/*.test.ts"
   },
   "dependencies": {
     "@colyseus/drizzle-driver": "^0.17.0",

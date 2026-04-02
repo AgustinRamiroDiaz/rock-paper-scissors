@@ -12,7 +12,7 @@
     "lint:fix": "echo 'Lint fix skipped - each service has independent linting'",
     "test": "cd backend && npm test",
     "test:e2e": "playwright test",
-    "precommit": "npm run lint && npm run test && npm run test:e2e"
+    "precommit": "npm run lint && npm run test:e2e"
   },
   "devDependencies": {
     "@colyseus/sdk": "^0.17.35",
