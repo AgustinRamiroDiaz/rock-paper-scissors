@@ -1,6 +1,4 @@
 Dockerfile.*
-node_modules/
-packages/client/node_modules/
-packages/server/node_modules/
-packages/shared/node_modules/
+**/node_modules/
+**/dist/
 docker-compose.yml
