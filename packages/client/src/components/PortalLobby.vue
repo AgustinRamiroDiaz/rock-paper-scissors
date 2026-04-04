@@ -126,7 +126,7 @@ const lobbyCount = ref(0);
 const loading = ref(true);
 const showCreatePanel = ref(false);
 const nameDraft = ref(props.playerName);
-const selectedFormat = ref<MatchFormat | null>(null);
+const selectedFormat = ref(MatchFormat.BestOf3);
 const allowBots = ref(true);
 let unsubscribeRooms: (() => void) | null = null;
 let unsubscribeLobbyCount: (() => void) | null = null;
@@ -189,15 +189,13 @@ async function subscribeToLobbyCount() {
 
 
 function cancelCreate() {
-  showCreatePanel.value = false;
-  selectedFormat.value = null;
-  allowBots.value = true;
+   showCreatePanel.value = false;
+   selectedFormat.value = MatchFormat.BestOf3;
+   allowBots.value = true;
 }
 
 async function confirmCreateRoom() {
-   if (selectedFormat.value === null) return;
-
-  showCreatePanel.value = false;
+   showCreatePanel.value = false;
 
   try {
     const nextName = setPlayerName(nameDraft.value);
@@ -206,10 +204,10 @@ async function confirmCreateRoom() {
     void router.push("/game");
   } catch (err) {
     console.error("Failed to create room:", err);
-  } finally {
-    selectedFormat.value = null;
-    allowBots.value = true;
-  }
+} finally {
+     selectedFormat.value = MatchFormat.BestOf3;
+     allowBots.value = true;
+}
 }
 
 async function joinRoom(roomId: string, spectate: boolean) {
@@ -491,10 +489,18 @@ function formatAge(createdAt: number): string {
 }
 
 .format-button {
-  padding: 14px;
-  background: rgba(255, 255, 255, 0.07);
-  color: #fff6d6;
-  font-size: 14px;
+   padding: 14px;
+   background: rgba(255, 255, 255, 0.07);
+   color: #fff6d6;
+   font-size: 14px;
+   border: 2px solid transparent;
+   transition: all 0.2s ease;
+}
+
+.format-button.selected {
+   border-color: #ffb36b;
+   background: rgba(255, 179, 107, 0.1);
+   color: #ffb36b;
 }
 
 .bot-toggle-label {
