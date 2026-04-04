@@ -46,11 +46,13 @@ export interface RPSRoomMetadata {
   playerCount?: number;
   spectatorCount?: number;
   createdAt?: number;
+  allowBots?: boolean;
 }
 
 export interface RoomCreateOptions {
   name: string;
   matchFormat: MatchFormat;
+  allowBots?: boolean;
 }
 
 export interface RoomJoinOptions {

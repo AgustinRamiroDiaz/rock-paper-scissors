@@ -16,8 +16,8 @@ async function spawnBots() {
   console.log(`Spawning ${total} bots (${NUM_CREATORS} creators, ${NUM_JOINERS} joiners) connecting to ${SERVER_URL}`);
 
   const bots: { Class: typeof RandomCreator | typeof RandomJoiner; name: string }[] = [
-    ...Array.from({ length: NUM_CREATORS }, (_, i) => ({ Class: RandomCreator as typeof RandomCreator, name: `RandomCreator_${i}` })),
-    ...Array.from({ length: NUM_JOINERS }, (_, i) => ({ Class: RandomJoiner as typeof RandomJoiner, name: `RandomJoiner_${i}` })),
+    ...Array.from({ length: NUM_CREATORS }, (_, i) => ({ Class: RandomCreator, name: `RandomCreator_${i}` })),
+    ...Array.from({ length: NUM_JOINERS }, (_, i) => ({ Class: RandomJoiner, name: `RandomJoiner_${i}` })),
   ];
 
   for (const { Class, name } of bots) {

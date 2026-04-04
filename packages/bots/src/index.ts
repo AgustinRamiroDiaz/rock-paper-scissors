@@ -117,10 +117,11 @@ export abstract class BaseBot {
   protected isRoomJoinable(room: RoomAvailable<RPSRoomMetadata>): boolean {
     const isLocked = Boolean((room as { locked?: boolean }).locked);
     const playerCount = room.metadata?.playerCount ?? 0;
+    const allowBots = room.metadata?.allowBots ?? true;
 
     // Use playerCount from metadata to determine if room has space for a player.
-    // A room is joinable if it has less than 2 players and is not locked.
-    return !isLocked && playerCount < 2;
+    // A room is joinable if it has less than 2 players, is not locked, and allows bots.
+    return !isLocked && playerCount < 2 && allowBots;
   }
 
   protected findEmptyRoom(rooms: RoomAvailable<RPSRoomMetadata>[]): RoomAvailable<RPSRoomMetadata> | undefined {

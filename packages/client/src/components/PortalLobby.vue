@@ -63,14 +63,23 @@
         <p class="eyebrow">New Match</p>
         <h3 class="create-title">Choose a format</h3>
         <div class="format-grid">
-          <button class="format-button" data-testid="bo3-btn" @click="createRoom(MatchFormat.BestOf3)">
+          <button :class="['format-button', selectedFormat === MatchFormat.BestOf3 ? 'selected' : '']" data-testid="bo3-btn" @click="selectedFormat = MatchFormat.BestOf3">
             Best of 3
           </button>
-          <button class="format-button" data-testid="bo5-btn" @click="createRoom(MatchFormat.BestOf5)">
+          <button :class="['format-button', selectedFormat === MatchFormat.BestOf5 ? 'selected' : '']" data-testid="bo5-btn" @click="selectedFormat = MatchFormat.BestOf5">
             Best of 5
           </button>
         </div>
-        <button class="ghost-button" @click="showCreatePanel = false">Cancel</button>
+
+        <label class="bot-toggle-label">
+          <input v-model="allowBots" type="checkbox" class="bot-toggle-checkbox" />
+          <span class="bot-toggle-text">Allow bots to join this room</span>
+        </label>
+
+        <div class="actions-row">
+          <button class="primary-button" @click="confirmCreateRoom">Create Room</button>
+          <button class="ghost-button" @click="cancelCreate">Cancel</button>
+        </div>
       </div>
     </div>
 
@@ -117,6 +126,8 @@ const lobbyCount = ref(0);
 const loading = ref(true);
 const showCreatePanel = ref(false);
 const nameDraft = ref(props.playerName);
+const selectedFormat = ref<MatchFormat | null>(null);
+const allowBots = ref(true);
 let unsubscribeRooms: (() => void) | null = null;
 let unsubscribeLobbyCount: (() => void) | null = null;
 
@@ -175,16 +186,29 @@ async function subscribeToLobbyCount() {
   }
 }
 
-async function createRoom(matchFormat: MatchFormat) {
+
+
+function cancelCreate() {
+  showCreatePanel.value = false;
+  selectedFormat.value = null;
+  allowBots.value = true;
+}
+
+async function confirmCreateRoom() {
+   if (selectedFormat.value === null) return;
+
   showCreatePanel.value = false;
 
   try {
     const nextName = setPlayerName(nameDraft.value);
     emit("update:playerName", nextName);
-    await network.createRoom(nextName, matchFormat);
+    await network.createRoom(nextName, selectedFormat.value, allowBots.value);
     void router.push("/game");
   } catch (err) {
     console.error("Failed to create room:", err);
+  } finally {
+    selectedFormat.value = null;
+    allowBots.value = true;
   }
 }
 
@@ -473,6 +497,38 @@ function formatAge(createdAt: number): string {
   font-size: 14px;
 }
 
+.bot-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(248, 206, 85, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+}
+
+.bot-toggle-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #ffb36b;
+}
+
+.bot-toggle-text {
+  color: rgba(255, 240, 194, 0.85);
+  font-size: 13px;
+}
+
+.actions-row {
+  display: flex;
+  gap: 10px;
+}
+
+.actions-row .primary-button {
+  flex: 1;
+}
+
 .ghost-button {
   padding: 10px 14px;
   background: transparent;
@@ -572,6 +628,24 @@ function formatAge(createdAt: number): string {
   .format-button {
     padding: 16px;
     font-size: 15px;
+  }
+
+  .bot-toggle-label {
+    padding: 10px 12px;
+  }
+
+  .bot-toggle-checkbox {
+    width: 16px;
+    height: 16px;
+  }
+
+  .bot-toggle-text {
+    font-size: 12px;
+  }
+
+  .actions-row {
+    flex-direction: column;
+    gap: 8px;
   }
 }
 

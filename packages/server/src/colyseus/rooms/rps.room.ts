@@ -48,7 +48,7 @@ export class RPSRoom extends Room<RPSRoomTypes> {
     },
   };
 
-  onCreate(options: { name?: string; matchFormat?: number }) {
+  onCreate(options: { name?: string; matchFormat?: number; allowBots?: boolean }) {
     this.state = new RPSRoomState();
     this.state.matchFormat = options.matchFormat ?? 3;
     this.maxClients = 10;
@@ -59,6 +59,7 @@ export class RPSRoom extends Room<RPSRoomTypes> {
       playerCount: 0,
       spectatorCount: 0,
       createdAt: Date.now(),
+      allowBots: options.allowBots ?? true,
     });
   }
 
