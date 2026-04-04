@@ -58,6 +58,7 @@ export class RPSRoom extends Room<RPSRoomTypes> {
       matchFormat: this.state.matchFormat,
       playerCount: 0,
       spectatorCount: 0,
+      createdAt: Date.now(),
     });
   }
 

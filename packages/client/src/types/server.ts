@@ -3,6 +3,7 @@ export interface RPSRoomMetadata {
   matchFormat: number;
   playerCount?: number;
   spectatorCount?: number;
+  createdAt?: number;
 }
 
 export interface RPSRoomOptions {

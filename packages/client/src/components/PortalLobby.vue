@@ -36,6 +36,10 @@
         <div class="room-copy">
           <span class="room-name">{{ room.metadata?.roomName ?? "RPS Game" }}</span>
           <span class="room-format">{{ room.metadata?.matchFormat === 5 ? "Best of 5" : "Best of 3" }}</span>
+          <span class="room-meta">
+            <span class="room-id">{{ room.roomId }}</span>
+            <span v-if="room.metadata?.createdAt" class="room-age">{{ formatAge(room.metadata.createdAt) }}</span>
+          </span>
         </div>
 
         <span :class="['player-count', isRoomFull(room) ? 'full' : 'open']">
@@ -95,6 +99,7 @@ interface RoomInfo {
     matchFormat: number;
     playerCount?: number;
     spectatorCount?: number;
+    createdAt?: number;
   };
 }
 
@@ -213,6 +218,15 @@ function getSpectatorCount(room: RoomInfo): number {
 function isRoomFull(room: RoomInfo): boolean {
   return getPlayerCount(room) >= 2;
 }
+
+function formatAge(createdAt: number): string {
+  const seconds = Math.floor((Date.now() - createdAt) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ago`;
+}
 </script>
 
 <style scoped>
@@ -324,6 +338,25 @@ function isRoomFull(room: RoomInfo): boolean {
 .room-format {
   color: rgba(255, 240, 194, 0.58);
   font-size: 13px;
+}
+
+.room-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.room-id {
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.04em;
+}
+
+.room-age {
+  font-size: 11px;
+  color: rgba(255, 240, 194, 0.35);
 }
 
 .player-count {
