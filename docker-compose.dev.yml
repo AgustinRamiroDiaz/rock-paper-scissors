@@ -57,7 +57,8 @@ services:
       dockerfile: Dockerfile.bots
     environment:
       SERVER_URL: "server:2567"
-      NUM_BOTS: "20"
+      NUM_CREATORS: "2"
+      NUM_JOINERS: "10"
     command: ["bun", "run", "--filter", "@rps/bots", "dev"]
     depends_on:
       server:

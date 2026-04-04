@@ -4,35 +4,33 @@ import {
 } from "./index";
 
 const SERVER_URL = process.env.SERVER_URL ?? "server:2567";
-const NUM_BOTS = parseInt(process.env.NUM_BOTS ?? "10", 10);
-
-const botClasses = [
-  { Class: RandomJoiner, name: "RandomJoiner" },
-  { Class: RandomCreator, name: "RandomCreator" },
-];
+const NUM_CREATORS = parseInt(process.env.NUM_CREATORS ?? "2", 10);
+const NUM_JOINERS = parseInt(process.env.NUM_JOINERS ?? "10", 10);
 
 async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function spawnBots() {
-  console.log(`Spawning ${NUM_BOTS} bots connecting to ${SERVER_URL}`);
+  const total = NUM_CREATORS + NUM_JOINERS;
+  console.log(`Spawning ${total} bots (${NUM_CREATORS} creators, ${NUM_JOINERS} joiners) connecting to ${SERVER_URL}`);
 
-  const bots: { run: () => Promise<void> }[] = [];
+  const bots: { Class: typeof RandomCreator | typeof RandomJoiner; name: string }[] = [
+    ...Array.from({ length: NUM_CREATORS }, (_, i) => ({ Class: RandomCreator as typeof RandomCreator, name: `RandomCreator_${i}` })),
+    ...Array.from({ length: NUM_JOINERS }, (_, i) => ({ Class: RandomJoiner as typeof RandomJoiner, name: `RandomJoiner_${i}` })),
+  ];
 
-  for (let i = 0; i < NUM_BOTS; i++) {
-    const { Class, name } = botClasses[i % botClasses.length];
-    const bot = new Class(`${name}_${i}`, SERVER_URL);
-    bots.push(bot);
+  for (const { Class, name } of bots) {
+    const bot = new Class(name, SERVER_URL);
 
     void bot.run().catch((err: unknown) => {
-      console.error(`Bot ${name}_${i} error:`, err);
+      console.error(`Bot ${name} error:`, err);
     });
 
     await sleep(500);
   }
 
-  console.log(`Spawned ${NUM_BOTS} bots`);
+  console.log(`Spawned ${total} bots`);
 }
 
 void spawnBots();
