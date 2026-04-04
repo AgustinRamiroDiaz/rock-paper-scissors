@@ -27,6 +27,7 @@ export abstract class BaseBot {
   private readonly strategy: PlayStrategy;
   private isJoining = false;
   private isSettingUpHandlers = false;
+  private knownRooms = new Map<string, RoomAvailable<RPSRoomMetadata>>();
 
   constructor(playerName: string, strategy: PlayStrategy, serverUrl = DEFAULT_SERVER_URL) {
     this.client = new Client(`ws://${serverUrl}`);
@@ -65,16 +66,22 @@ export abstract class BaseBot {
 
     this.lobbyRoom.onMessage("rooms", (rooms: RoomAvailable<RPSRoomMetadata>[]) => {
       this.log(`lobby rooms snapshot: ${rooms.length}`);
+      this.knownRooms.clear();
+      for (const room of rooms) {
+        this.knownRooms.set(room.roomId, room);
+      }
       void this.handleRoomsUpdate(rooms);
     });
 
-    this.lobbyRoom.onMessage("+", ([, room]: [string, RoomAvailable<RPSRoomMetadata>]) => {
+    this.lobbyRoom.onMessage("+", ([roomId, room]: [string, RoomAvailable<RPSRoomMetadata>]) => {
       this.log("lobby room added event");
+      this.knownRooms.set(roomId, room);
       void this.handleRoomAdded(room);
     });
 
     this.lobbyRoom.onMessage("-", (roomId: string) => {
       this.log(`lobby room removed: ${roomId}`);
+      this.knownRooms.delete(roomId);
       void this.handleRoomRemoved(roomId);
     });
   }
@@ -126,8 +133,7 @@ export abstract class BaseBot {
     }
 
     if (this.canJoinExistingRooms()) {
-      const rooms = await this.getAvailableRooms();
-      const joinableRooms = rooms
+      const joinableRooms = this.getAvailableRooms()
         .filter((r) => this.isRoomJoinable(r))
         .sort((a, b) => {
           // Prefer rooms with 1 player (waiting for opponent) over rooms with 0 players.
@@ -164,16 +170,8 @@ export abstract class BaseBot {
     }
   }
 
-  protected getAvailableRooms(): Promise<RoomAvailable<RPSRoomMetadata>[]> {
-    const lobby = this.lobbyRoom;
-    if (!lobby) return Promise.resolve([]);
-    return new Promise((resolve) => {
-      const removeListener = lobby.onMessage("rooms", (r: RoomAvailable<RPSRoomMetadata>[]) => {
-        removeListener();
-        resolve(r);
-      });
-      lobby.send("rooms");
-    });
+  protected getAvailableRooms(): RoomAvailable<RPSRoomMetadata>[] {
+    return Array.from(this.knownRooms.values());
   }
 
   protected async createRoom(matchFormat: MatchFormat = MF.BestOf3): Promise<boolean> {
