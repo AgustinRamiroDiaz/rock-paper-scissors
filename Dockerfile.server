@@ -13,6 +13,8 @@ RUN bun install --backend=symlink
 # Development stage - needs full source and all workspaces for monorepo
 FROM builder AS dev
 COPY . .
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD bun -e "const r = await fetch('http://localhost:2567/monitor'); process.exit(r.ok ? 0 : 1)"
 CMD ["bun", "run", "--filter", "server", "dev"]
 
 # Production stage - copy node_modules from builder (with symlinks)
@@ -21,5 +23,5 @@ WORKDIR /app
 COPY packages packages
 EXPOSE 2567
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD bun -e "const r = await fetch('http://localhost:${PORT:-2567}/monitor'); process.exit(r.ok ? 0 : 1)"
+  CMD bun -e "const r = await fetch('http://localhost:2567/monitor'); process.exit(r.ok ? 0 : 1)"
 CMD ["bun", "run", "packages/server/src/main.ts"]

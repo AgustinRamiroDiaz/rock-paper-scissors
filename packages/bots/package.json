@@ -1,0 +1,21 @@
+{
+  "name": "@rps/bots",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./src/*": "./src/*.ts"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "spawn": "bun run src/spawn.ts",
+    "dev": "bun --watch run src/spawn.ts"
+  },
+  "dependencies": {
+    "@colyseus/sdk": "^0.17.36",
+    "@rps/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "typescript": "5.7"
+  }
+}

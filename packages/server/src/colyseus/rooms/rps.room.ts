@@ -25,21 +25,23 @@ function isChoice(value: string): value is Choice {
   return value === "rock" || value === "paper" || value === "scissors";
 }
 
+function normalizePlayerName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
 export class RPSRoom extends Room<RPSRoomTypes> {
   state = new RPSRoomState();
   static leaderboardService: LeaderboardService | undefined;
+  private readonly matchEndDisconnectDelayMs = 10_000;
 
   private pendingChoices = new Map<string, Choice>();
   private playerSlots: string[] = [];
   private spectators = new Set<string>();
-  private playAgainVotes = new Set<string>();
+  private matchEndCloseTimer: { clear: () => void } | null = null;
 
   messages = {
     [ClientMessage.MakeChoice]: (client: Client, payload: MakeChoicePayload) => {
       this.handleMakeChoice(client, payload);
-    },
-    [ClientMessage.PlayAgain]: (client: Client) => {
-      this.handlePlayAgain(client);
     },
     [ClientMessage.ToggleReady]: (client: Client) => {
       this.handleToggleReady(client);
@@ -54,13 +56,36 @@ export class RPSRoom extends Room<RPSRoomTypes> {
     void this.setMetadata({
       roomName: options.name ?? "RPS Game",
       matchFormat: this.state.matchFormat,
+      playerCount: 0,
+      spectatorCount: 0,
     });
   }
 
   onJoin(client: Client, options: RoomJoinOptions) {
-    if (options.spectate === true || this.playerSlots.length >= 2) {
+    if (options.spectate === true) {
       this.spectators.add(client.sessionId);
       this.state.spectatorCount++;
+      this.updatePresenceMetadata();
+      return;
+    }
+
+    if (this.playerSlots.length >= 2) {
+      throw new Error("Room is full");
+    }
+
+    const requestedName = normalizePlayerName(options.name);
+    const duplicateName = this.playerSlots.some((sessionId) => {
+      const existing = this.state.players.get(sessionId);
+      if (!existing) {
+        return false;
+      }
+
+      return normalizePlayerName(existing.name) === requestedName;
+    });
+    if (duplicateName) {
+      client.send(ServerMessage.Error, { message: "Player name already in use in this room" });
+      // Leave immediately so player slots can only contain unique names.
+      client.leave(4002);
       return;
     }
 
@@ -69,11 +94,13 @@ export class RPSRoom extends Room<RPSRoomTypes> {
     player.name = options.name;
     this.state.players.set(client.sessionId, player);
     this.playerSlots.push(client.sessionId);
+    this.updatePresenceMetadata();
 
     if (this.playerSlots.length === 1) {
       this.state.player1Id = client.sessionId;
     } else if (this.playerSlots.length === 2) {
       this.state.player2Id = client.sessionId;
+      void this.lock();
       this.startChoosing();
     }
   }
@@ -83,6 +110,7 @@ export class RPSRoom extends Room<RPSRoomTypes> {
     if (this.spectators.has(client.sessionId)) {
       this.spectators.delete(client.sessionId);
       this.state.spectatorCount--;
+      this.updatePresenceMetadata();
       return;
     }
 
@@ -117,7 +145,8 @@ export class RPSRoom extends Room<RPSRoomTypes> {
   }
 
   onDispose() {
-    // Cleanup
+    this.matchEndCloseTimer?.clear();
+    this.matchEndCloseTimer = null;
   }
 
   private handlePermanentLeave(sessionId: string) {
@@ -132,6 +161,7 @@ export class RPSRoom extends Room<RPSRoomTypes> {
       // Forfeit: remaining player wins
       this.state.winnerId = remainingPlayerId;
       this.state.phase = RoomPhase.MatchEnd;
+      this.scheduleRoomCloseAfterMatchEnd();
 
       const winner = this.state.players.get(remainingPlayerId);
       const loser = this.state.players.get(sessionId);
@@ -153,6 +183,17 @@ export class RPSRoom extends Room<RPSRoomTypes> {
     if (this.playerSlots.length === 0) {
       this.state.phase = RoomPhase.WaitingForPlayers;
     }
+
+    this.updatePresenceMetadata();
+  }
+
+  private updatePresenceMetadata() {
+    void this.setMetadata({
+      roomName: this.metadata.roomName,
+      matchFormat: this.state.matchFormat,
+      playerCount: this.playerSlots.length,
+      spectatorCount: this.state.spectatorCount,
+    });
   }
 
   private handleMakeChoice(client: Client, payload: MakeChoicePayload) {
@@ -175,24 +216,6 @@ export class RPSRoom extends Room<RPSRoomTypes> {
 
     if (this.pendingChoices.size === 2) {
       this.evaluateRound();
-    }
-  }
-
-  private handlePlayAgain(client: Client) {
-    if ((this.state.phase as RoomPhase) !== RoomPhase.MatchEnd) return;
-    if (this.spectators.has(client.sessionId)) return;
-
-    this.playAgainVotes.add(client.sessionId);
-
-    const player = this.state.players.get(client.sessionId);
-    if (player) {
-      player.ready = true;
-    }
-
-    // Both players want to play again
-    if (this.playAgainVotes.size === 2) {
-      this.resetMatch();
-      this.startChoosing();
     }
   }
 
@@ -266,6 +289,7 @@ export class RPSRoom extends Room<RPSRoomTypes> {
 
       this.state.winnerId = winner.sessionId;
       this.state.phase = RoomPhase.MatchEnd;
+      this.scheduleRoomCloseAfterMatchEnd();
 
       this.broadcast(ServerMessage.MatchResult, {
         winner: winner.name,
@@ -289,18 +313,21 @@ export class RPSRoom extends Room<RPSRoomTypes> {
     });
   }
 
-  private resetMatch() {
-    this.state.currentRound = 0;
-    this.state.winnerId = "";
-    this.state.rounds.clear();
-    this.pendingChoices.clear();
-    this.playAgainVotes.clear();
+  private scheduleRoomCloseAfterMatchEnd() {
+    this.matchEndCloseTimer?.clear();
 
-    this.state.players.forEach((player: PlayerSchema) => {
-      player.score = 0;
-      player.ready = false;
-      player.hasChosen = false;
-      player.currentChoice = "";
-    });
+    const seconds = Math.ceil(this.matchEndDisconnectDelayMs / 1000);
+    this.broadcast(ServerMessage.MatchClosing, { seconds });
+
+    this.matchEndCloseTimer = this.clock.setTimeout(() => {
+      this.matchEndCloseTimer = null;
+
+      for (const client of this.clients) {
+        client.leave(4000);
+      }
+
+      void this.disconnect();
+    }, this.matchEndDisconnectDelayMs);
   }
+
 }

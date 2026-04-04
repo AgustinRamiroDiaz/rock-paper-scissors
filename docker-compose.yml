@@ -32,6 +32,7 @@ services:
       - "2567:2567"
     restart: unless-stopped
 
+
   client:
     build:
       context: .
@@ -47,6 +48,18 @@ services:
     restart: unless-stopped
     environment:
       VITE_SERVER_HOST: ${VITE_SERVER_HOST:-rps-server.agustinramirodiaz.dev}
+
+  bots:
+    build:
+      context: .
+      dockerfile: Dockerfile.bots
+    environment:
+      SERVER_URL: "server:2567"
+      NUM_BOTS: "20"
+    depends_on:
+      server:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   postgres-data:

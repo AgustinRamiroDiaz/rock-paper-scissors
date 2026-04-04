@@ -67,9 +67,6 @@
         <h2 :class="['match-result', matchResultClass]" data-testid="match-result">{{ matchResultText }}</h2>
         <p class="final-score" data-testid="final-score">{{ p1Name }} {{ p1Score }} - {{ p2Score }} {{ p2Name }}</p>
         <div v-if="!spectating" class="match-actions">
-          <button class="btn btn-green" :disabled="playAgainSent" @click="playAgain">
-            {{ playAgainSent ? "WAITING..." : "PLAY AGAIN" }}
-          </button>
           <button class="btn btn-dark" @click="leave">LOBBY</button>
         </div>
       </div>
@@ -89,7 +86,7 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { Callbacks } from "@colyseus/sdk";
 import { network } from "../network/client";
-import { Choice, RoomPhase, ClientMessage } from "@rps/shared";
+import { Choice, RoomPhase, ClientMessage, ServerMessage } from "@rps/shared";
 
 defineOptions({ name: "GamePage" });
 
@@ -128,8 +125,9 @@ const winnerId = ref("");
 const banner = ref("");
 const hasChosen = ref(false);
 const chosenValue = ref<Choice | "">("");
-const playAgainSent = ref(false);
 const lastRoundResult = ref<RoundOutcome>("");
+const matchCloseCountdown = ref<number | null>(null);
+let matchCloseInterval: number | null = null;
 
 const choices = [
   { value: Choice.Rock, label: "ROCK", icon: "🪨", class: "choice-rock" },
@@ -182,11 +180,6 @@ function makeChoice(choice: Choice) {
   room?.send(ClientMessage.MakeChoice, { choice });
 }
 
-function playAgain() {
-  playAgainSent.value = true;
-  room?.send(ClientMessage.PlayAgain);
-}
-
 function leave() {
   network.disconnect();
   void router.push("/");
@@ -221,7 +214,6 @@ onMounted(() => {
       if (val === RoomPhase.Choosing) {
         hasChosen.value = false;
         chosenValue.value = "";
-        playAgainSent.value = false;
       }
     }),
     $.listen("currentRound" as never, (val: number) => { currentRound.value = val; }),
@@ -233,15 +225,16 @@ onMounted(() => {
   );
 
   cleanups.push(
-    $.onAdd("players" as never, (player: PlayerView) => {
+    $.onAdd("players" as never, (player: unknown) => {
       const state = getRoomState();
       if (state == null) return;
       updatePlayers(state);
+      const typedPlayer = player as PlayerView;
       cleanups.push(
-        $.listen(player as never, "score" as never, () => { updatePlayers(state); }),
-        $.listen(player as never, "hasChosen" as never, () => { /* opponent status */ }),
-        $.listen(player as never, "currentChoice" as never, () => { updatePlayers(state); }),
-        $.listen(player as never, "connected" as never, () => { /* reconnect status */ }),
+        $.listen(typedPlayer as never, "score" as never, () => { updatePlayers(state); }),
+        $.listen(typedPlayer as never, "hasChosen" as never, () => { /* opponent status */ }),
+        $.listen(typedPlayer as never, "currentChoice" as never, () => { updatePlayers(state); }),
+        $.listen(typedPlayer as never, "connected" as never, () => { /* reconnect status */ }),
       );
     }),
   );
@@ -252,8 +245,9 @@ onMounted(() => {
 
   // Watch rounds for result display
   cleanups.push(
-    $.onAdd("rounds" as never, (round: { result: RoundOutcome }) => {
-      lastRoundResult.value = round.result;
+    $.onAdd("rounds" as never, (round: unknown) => {
+      const typedRound = round as { result: RoundOutcome };
+      lastRoundResult.value = typedRound.result;
     }),
   );
 
@@ -263,6 +257,37 @@ onMounted(() => {
   room.onMessage("opponent_reconnected", () => {
     banner.value = "";
   });
+  room.onMessage(ServerMessage.MatchClosing, (payload: { seconds?: number }) => {
+    const seconds = payload.seconds ?? 10;
+    matchCloseCountdown.value = seconds;
+    banner.value = `Match finished. Returning to lobby in ${seconds}s...`;
+
+    if (matchCloseInterval != null) {
+      window.clearInterval(matchCloseInterval);
+      matchCloseInterval = null;
+    }
+
+    matchCloseInterval = window.setInterval(() => {
+      const current = matchCloseCountdown.value;
+      if (current == null || current <= 1) {
+        banner.value = "Match finished. Returning to lobby...";
+        matchCloseCountdown.value = 0;
+        if (matchCloseInterval != null) {
+          window.clearInterval(matchCloseInterval);
+          matchCloseInterval = null;
+        }
+        return;
+      }
+
+      const next = current - 1;
+      matchCloseCountdown.value = next;
+      banner.value = `Match finished. Returning to lobby in ${next}s...`;
+    }, 1000);
+  });
+  room.onLeave(() => {
+    network.disconnect();
+    void router.push("/");
+  });
 
   syncFromState();
   const syncInterval = window.setInterval(syncFromState, 100);
@@ -271,6 +296,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   cleanups.forEach((fn) => { fn(); });
+  if (matchCloseInterval != null) {
+    window.clearInterval(matchCloseInterval);
+    matchCloseInterval = null;
+  }
 });
 
 function updatePlayers(state: RoomStateView) {

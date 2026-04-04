@@ -1,6 +1,8 @@
 export interface RPSRoomMetadata {
   roomName: string;
   matchFormat: number;
+  playerCount?: number;
+  spectatorCount?: number;
 }
 
 export interface RPSRoomOptions {

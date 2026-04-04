@@ -126,7 +126,7 @@ describe("RPS", () => {
     expect(bob.losses).toBeGreaterThanOrEqual(1);
   }, 30000);
 
-  test("play again resets the match", async () => {
+  test("match remains ended after result", async () => {
     const room = await colyseus.createRoom<RPSRoom>("rps", {
       matchFormat: MatchFormat.BestOf3,
     });
@@ -148,13 +148,9 @@ describe("RPS", () => {
     await waitForPhase(room, RoomPhase.MatchEnd);
     expect(room.state.winnerId).toBe(client1.sessionId);
 
-    // Both players vote to play again
-    client1.send(ClientMessage.PlayAgain);
-    client2.send(ClientMessage.PlayAgain);
-
-    await waitForPhase(room, RoomPhase.Choosing);
-    expect(room.state.currentRound).toBe(0);
-    expect(room.state.winnerId).toBe("");
+    // Replay is disabled; room should remain in MatchEnd.
+    await new Promise((resolve) => { setTimeout(resolve, 500); });
+    expect(room.state.phase).toBe(RoomPhase.MatchEnd);
   }, 30000);
 
   test("player disconnect mid-match results in forfeit", async () => {
@@ -172,6 +168,36 @@ describe("RPS", () => {
     await waitForPhase(room, RoomPhase.MatchEnd);
     expect(room.state.winnerId).toBe(client1.sessionId);
   }, 30000);
+
+  test("room auto-closes after match ends", async () => {
+    const room = await colyseus.createRoom<RPSRoom>("rps", {
+      matchFormat: MatchFormat.BestOf3,
+    });
+
+    const client1 = await colyseus.connectTo(room, { name: "Lisa" });
+    const client2 = await colyseus.connectTo(room, { name: "Mike" });
+
+    await waitForPhase(room, RoomPhase.Choosing);
+
+    for (let i = 0; i < 2; i++) {
+      client1.send(ClientMessage.MakeChoice, { choice: Choice.Rock });
+      client2.send(ClientMessage.MakeChoice, { choice: Choice.Scissors });
+      if (i < 1) {
+        await waitForPhase(room, RoomPhase.Revealing);
+        await waitForPhase(room, RoomPhase.Choosing);
+      }
+    }
+
+    await waitForPhase(room, RoomPhase.MatchEnd);
+
+    const disconnected = new Promise<boolean>((resolve) => {
+      client1.onLeave(() => { resolve(true); });
+      setTimeout(() => { resolve(false); }, 12_000);
+    });
+
+    const result = await disconnected;
+    expect(result).toBe(true);
+  }, 30_000);
 
   test("spectator can join a full room", async () => {
     const room = await colyseus.createRoom<RPSRoom>("rps", {

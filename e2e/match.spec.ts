@@ -68,6 +68,53 @@ async function waitForMatchEnd(page: Page) {
   await page.getByTestId("match-end").waitFor({ timeout: 30_000 });
 }
 
+test.describe("Room auto-close", () => {
+  test("room disconnects all clients after 10 seconds post-match", async ({ browser }) => {
+    const runId = `${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
+    const playerOneName = `AutoCloseP1${runId}`.slice(0, 16);
+    const playerTwoName = `AutoCloseP2${runId}`.slice(0, 16);
+
+    const ctx1 = await browser.newContext();
+    const ctx2 = await browser.newContext();
+    const player1 = await ctx1.newPage();
+    const player2 = await ctx2.newPage();
+
+    await openPortal(player1, playerOneName);
+    await createBo3Room(player1);
+
+    await player1.getByTestId("phase-waiting").waitFor({ timeout: 5_000 });
+
+    await openPortal(player2, playerTwoName);
+    const roomId = await waitForCurrentRoomId(player1);
+    await joinRoomById(player2, roomId);
+
+    await waitForChoosing(player1);
+    await waitForChoosing(player2);
+
+    // Win 2 rounds quickly (Rock beats Scissors)
+    for (let i = 0; i < 2; i++) {
+      await choose(player1, "rock");
+      await choose(player2, "scissors");
+      if (i < 1) {
+        await waitForChoosing(player1);
+        await waitForChoosing(player2);
+      }
+    }
+
+    await waitForMatchEnd(player1);
+    await waitForMatchEnd(player2);
+
+    // Wait for room to auto-close after 10 second delay
+    await player1.waitForFunction(
+      () => (window as unknown as { __RPS_ROOM_ID?: string }).__RPS_ROOM_ID === undefined,
+      { timeout: 15_000 },
+    );
+
+    await ctx1.close();
+    await ctx2.close();
+  });
+});
+
 test.describe("Best of 3 match with spectator", () => {
   test("two players complete a Bo3 match while a spectator watches", async ({ browser }) => {
     const runId = `${Date.now()}-${Math.floor(Math.random() * 10_000)}`;

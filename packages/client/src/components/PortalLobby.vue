@@ -38,17 +38,18 @@
           <span class="room-format">{{ room.metadata?.matchFormat === 5 ? "Best of 5" : "Best of 3" }}</span>
         </div>
 
-        <span :class="['player-count', room.clients >= 2 ? 'full' : 'open']">
-          {{ room.clients }}/2 players
+        <span :class="['player-count', isRoomFull(room) ? 'full' : 'open']">
+          {{ getPlayerCount(room) }}/2 players
+          <template v-if="getSpectatorCount(room) > 0"> · {{ getSpectatorCount(room) }} spectating</template>
         </span>
 
         <button
           class="row-action"
-          :class="room.clients >= 2 ? 'spectate' : 'join'"
-          :data-testid="room.clients >= 2 ? 'spectate-btn' : 'join-btn'"
-          @click="joinRoom(room.roomId, room.clients >= 2)"
+          :class="isRoomFull(room) ? 'spectate' : 'join'"
+          :data-testid="isRoomFull(room) ? 'spectate-btn' : 'join-btn'"
+          @click="joinRoom(room.roomId, isRoomFull(room))"
         >
-          {{ room.clients >= 2 ? "Spectate" : "Join" }}
+          {{ isRoomFull(room) ? "Spectate" : "Join" }}
         </button>
       </div>
     </div>
@@ -89,7 +90,12 @@ interface RoomInfo {
   roomId: string;
   clients: number;
   maxClients: number;
-  metadata?: { roomName: string; matchFormat: number };
+  metadata?: {
+    roomName: string;
+    matchFormat: number;
+    playerCount?: number;
+    spectatorCount?: number;
+  };
 }
 
 const props = defineProps<{
@@ -186,6 +192,26 @@ async function joinRoom(roomId: string, spectate: boolean) {
   } catch (err) {
     console.error("Failed to join room:", err);
   }
+}
+
+function getPlayerCount(room: RoomInfo): number {
+  if (typeof room.metadata?.playerCount === "number") {
+    return room.metadata.playerCount;
+  }
+
+  return Math.min(room.clients, 2);
+}
+
+function getSpectatorCount(room: RoomInfo): number {
+  if (typeof room.metadata?.spectatorCount === "number") {
+    return room.metadata.spectatorCount;
+  }
+
+  return Math.max(room.clients - getPlayerCount(room), 0);
+}
+
+function isRoomFull(room: RoomInfo): boolean {
+  return getPlayerCount(room) >= 2;
 }
 </script>
 
