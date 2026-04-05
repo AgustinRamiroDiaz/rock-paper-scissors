@@ -55,7 +55,6 @@ export class RPSRoom extends Room<RPSRoomTypes> {
     this.maxClients = 10;
     if (options.name != null && options.name !== "") {
       this.creatorName = normalizePlayerName(options.name);
-      void this.lock();
     }
 
     void this.setMetadata({
@@ -65,6 +64,7 @@ export class RPSRoom extends Room<RPSRoomTypes> {
       spectatorCount: 0,
       createdAt: Date.now(),
       allowBots: options.allowBots ?? true,
+      creatorJoined: this.creatorName === null,
     });
   }
 
@@ -84,7 +84,6 @@ export class RPSRoom extends Room<RPSRoomTypes> {
       if (normalizePlayerName(options.name) !== this.creatorName) {
         throw new Error("Only the room creator can join first");
       }
-      void this.unlock();
     }
 
     const requestedName = normalizePlayerName(options.name);
@@ -208,6 +207,7 @@ export class RPSRoom extends Room<RPSRoomTypes> {
       spectatorCount: this.state.spectatorCount,
       createdAt: this.metadata.createdAt,
       allowBots: this.metadata.allowBots,
+      creatorJoined: this.creatorName === null || this.playerSlots.length > 0,
     });
   }
 

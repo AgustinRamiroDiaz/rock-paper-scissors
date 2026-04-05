@@ -47,6 +47,7 @@ export interface RPSRoomMetadata {
   spectatorCount: number;
   createdAt: number;
   allowBots: boolean;
+  creatorJoined: boolean;
 }
 
 export interface RoomCreateOptions {
