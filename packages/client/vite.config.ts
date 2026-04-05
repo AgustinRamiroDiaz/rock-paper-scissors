@@ -8,7 +8,7 @@ export default defineConfig({
   server: {
     host: "0.0.0.0",
     port: 3001,
-    allowedHosts: ["rps.agustinramirodiaz.dev"]
+    allowedHosts: [".agustinramirodiaz.dev"]
   },
   resolve: {
     conditions: ["browser", "import", "module", "default"],
