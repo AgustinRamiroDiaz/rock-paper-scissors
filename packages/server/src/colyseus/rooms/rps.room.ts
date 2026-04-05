@@ -194,6 +194,8 @@ export class RPSRoom extends Room<RPSRoomTypes> {
       matchFormat: this.state.matchFormat,
       playerCount: this.playerSlots.length,
       spectatorCount: this.state.spectatorCount,
+      createdAt: this.metadata.createdAt,
+      allowBots: this.metadata.allowBots,
     });
   }
 

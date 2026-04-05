@@ -43,16 +43,16 @@ export interface ErrorPayload {
 export interface RPSRoomMetadata {
   roomName: string;
   matchFormat: number;
-  playerCount?: number;
-  spectatorCount?: number;
-  createdAt?: number;
-  allowBots?: boolean;
+  playerCount: number;
+  spectatorCount: number;
+  createdAt: number;
+  allowBots: boolean;
 }
 
 export interface RoomCreateOptions {
   name: string;
   matchFormat: MatchFormat;
-  allowBots?: boolean;
+  allowBots: boolean;
 }
 
 export interface RoomJoinOptions {
