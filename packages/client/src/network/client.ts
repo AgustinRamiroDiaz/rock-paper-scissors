@@ -135,10 +135,11 @@ class NetworkManager {
     };
   }
 
-  async createRoom(playerName: string, matchFormat: MatchFormat) {
+  async createRoom(playerName: string, matchFormat: MatchFormat, allowBots: boolean) {
     this.room = await this.client.create("rps", {
       name: playerName,
       matchFormat,
+      allowBots,
     });
     this.publishCurrentRoomId();
     return this.room;

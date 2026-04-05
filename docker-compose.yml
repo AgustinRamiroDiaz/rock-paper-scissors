@@ -1,13 +1,10 @@
 services:
   postgres:
     image: postgres:18.3-alpine3.23
-    container_name: rps-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
-    ports:
-      - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql
     healthcheck:
@@ -28,9 +25,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    ports:
-      - "2567:2567"
     restart: unless-stopped
+
 
   client:
     build:
@@ -42,11 +38,22 @@ services:
     depends_on:
       server:
         condition: service_healthy
-    ports:
-      - "3001:3001"
     restart: unless-stopped
     environment:
       VITE_SERVER_HOST: ${VITE_SERVER_HOST:-rps-server.agustinramirodiaz.dev}
+
+  bots:
+    build:
+      context: .
+      dockerfile: Dockerfile.bots
+    environment:
+      SERVER_URL: "server:2567"
+      NUM_CREATORS: "2"
+      NUM_JOINERS: "10"
+    depends_on:
+      server:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   postgres-data:

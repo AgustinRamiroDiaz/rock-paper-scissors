@@ -9,6 +9,7 @@ export enum ClientMessage {
 export enum ServerMessage {
   RoundResult = "round_result",
   MatchResult = "match_result",
+  MatchClosing = "match_closing",
   Error = "error",
   OpponentDisconnected = "opponent_disconnected",
   OpponentReconnected = "opponent_reconnected",
@@ -31,6 +32,10 @@ export interface MatchResultPayload {
   player2Score: number;
 }
 
+export interface MatchClosingPayload {
+  seconds: number;
+}
+
 export interface ErrorPayload {
   message: string;
 }
@@ -38,11 +43,17 @@ export interface ErrorPayload {
 export interface RPSRoomMetadata {
   roomName: string;
   matchFormat: number;
+  playerCount: number;
+  spectatorCount: number;
+  createdAt: number;
+  allowBots: boolean;
+  creatorJoined: boolean;
 }
 
 export interface RoomCreateOptions {
   name: string;
   matchFormat: MatchFormat;
+  allowBots: boolean;
 }
 
 export interface RoomJoinOptions {

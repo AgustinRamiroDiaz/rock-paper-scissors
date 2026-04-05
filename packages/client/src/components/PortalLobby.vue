@@ -36,19 +36,24 @@
         <div class="room-copy">
           <span class="room-name">{{ room.metadata?.roomName ?? "RPS Game" }}</span>
           <span class="room-format">{{ room.metadata?.matchFormat === 5 ? "Best of 5" : "Best of 3" }}</span>
+          <span class="room-meta">
+            <span class="room-id">{{ room.roomId }}</span>
+            <span v-if="room.metadata?.createdAt" class="room-age">{{ formatAge(room.metadata.createdAt) }}</span>
+          </span>
         </div>
 
-        <span :class="['player-count', room.clients >= 2 ? 'full' : 'open']">
-          {{ room.clients }}/2 players
+        <span :class="['player-count', isRoomFull(room) ? 'full' : 'open']">
+          {{ getPlayerCount(room) }}/2 players
+          <template v-if="getSpectatorCount(room) > 0"> · {{ getSpectatorCount(room) }} spectating</template>
         </span>
 
         <button
           class="row-action"
-          :class="room.clients >= 2 ? 'spectate' : 'join'"
-          :data-testid="room.clients >= 2 ? 'spectate-btn' : 'join-btn'"
-          @click="joinRoom(room.roomId, room.clients >= 2)"
+          :class="isRoomFull(room) ? 'spectate' : 'join'"
+          :data-testid="isRoomFull(room) ? 'spectate-btn' : 'join-btn'"
+          @click="joinRoom(room.roomId, isRoomFull(room))"
         >
-          {{ room.clients >= 2 ? "Spectate" : "Join" }}
+          {{ isRoomFull(room) ? "Spectate" : "Join" }}
         </button>
       </div>
     </div>
@@ -58,14 +63,23 @@
         <p class="eyebrow">New Match</p>
         <h3 class="create-title">Choose a format</h3>
         <div class="format-grid">
-          <button class="format-button" data-testid="bo3-btn" @click="createRoom(MatchFormat.BestOf3)">
+          <button :class="['format-button', selectedFormat === MatchFormat.BestOf3 ? 'selected' : '']" data-testid="bo3-btn" @click="selectedFormat = MatchFormat.BestOf3">
             Best of 3
           </button>
-          <button class="format-button" data-testid="bo5-btn" @click="createRoom(MatchFormat.BestOf5)">
+          <button :class="['format-button', selectedFormat === MatchFormat.BestOf5 ? 'selected' : '']" data-testid="bo5-btn" @click="selectedFormat = MatchFormat.BestOf5">
             Best of 5
           </button>
         </div>
-        <button class="ghost-button" @click="showCreatePanel = false">Cancel</button>
+
+        <label class="bot-toggle-label">
+          <input v-model="allowBots" type="checkbox" class="bot-toggle-checkbox" data-testid="allow-bots-checkbox" />
+          <span class="bot-toggle-text">Allow bots to join this room</span>
+        </label>
+
+        <div class="actions-row">
+          <button class="primary-button" data-testid="confirm-create-btn" @click="confirmCreateRoom">Create Room</button>
+          <button class="ghost-button" @click="cancelCreate">Cancel</button>
+        </div>
       </div>
     </div>
 
@@ -89,7 +103,13 @@ interface RoomInfo {
   roomId: string;
   clients: number;
   maxClients: number;
-  metadata?: { roomName: string; matchFormat: number };
+  metadata?: {
+    roomName: string;
+    matchFormat: number;
+    playerCount?: number;
+    spectatorCount?: number;
+    createdAt?: number;
+  };
 }
 
 const props = defineProps<{
@@ -106,6 +126,8 @@ const lobbyCount = ref(0);
 const loading = ref(true);
 const showCreatePanel = ref(false);
 const nameDraft = ref(props.playerName);
+const selectedFormat = ref(MatchFormat.BestOf3);
+const allowBots = ref(true);
 let unsubscribeRooms: (() => void) | null = null;
 let unsubscribeLobbyCount: (() => void) | null = null;
 
@@ -164,17 +186,28 @@ async function subscribeToLobbyCount() {
   }
 }
 
-async function createRoom(matchFormat: MatchFormat) {
-  showCreatePanel.value = false;
+
+
+function cancelCreate() {
+   showCreatePanel.value = false;
+   selectedFormat.value = MatchFormat.BestOf3;
+   allowBots.value = true;
+}
+
+async function confirmCreateRoom() {
+   showCreatePanel.value = false;
 
   try {
     const nextName = setPlayerName(nameDraft.value);
     emit("update:playerName", nextName);
-    await network.createRoom(nextName, matchFormat);
+    await network.createRoom(nextName, selectedFormat.value, allowBots.value);
     void router.push("/game");
   } catch (err) {
     console.error("Failed to create room:", err);
-  }
+} finally {
+     selectedFormat.value = MatchFormat.BestOf3;
+     allowBots.value = true;
+}
 }
 
 async function joinRoom(roomId: string, spectate: boolean) {
@@ -186,6 +219,35 @@ async function joinRoom(roomId: string, spectate: boolean) {
   } catch (err) {
     console.error("Failed to join room:", err);
   }
+}
+
+function getPlayerCount(room: RoomInfo): number {
+  if (typeof room.metadata?.playerCount === "number") {
+    return room.metadata.playerCount;
+  }
+
+  return Math.min(room.clients, 2);
+}
+
+function getSpectatorCount(room: RoomInfo): number {
+  if (typeof room.metadata?.spectatorCount === "number") {
+    return room.metadata.spectatorCount;
+  }
+
+  return Math.max(room.clients - getPlayerCount(room), 0);
+}
+
+function isRoomFull(room: RoomInfo): boolean {
+  return getPlayerCount(room) >= 2;
+}
+
+function formatAge(createdAt: number): string {
+  const seconds = Math.floor((Date.now() - createdAt) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ago`;
 }
 </script>
 
@@ -300,6 +362,25 @@ async function joinRoom(roomId: string, spectate: boolean) {
   font-size: 13px;
 }
 
+.room-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.room-id {
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.04em;
+}
+
+.room-age {
+  font-size: 11px;
+  color: rgba(255, 240, 194, 0.35);
+}
+
 .player-count {
   min-width: 86px;
   text-align: right;
@@ -408,10 +489,50 @@ async function joinRoom(roomId: string, spectate: boolean) {
 }
 
 .format-button {
-  padding: 14px;
-  background: rgba(255, 255, 255, 0.07);
-  color: #fff6d6;
-  font-size: 14px;
+   padding: 14px;
+   background: rgba(255, 255, 255, 0.07);
+   color: #fff6d6;
+   font-size: 14px;
+   border: 2px solid transparent;
+   transition: all 0.2s ease;
+}
+
+.format-button.selected {
+   border-color: #ffb36b;
+   background: rgba(255, 179, 107, 0.1);
+   color: #ffb36b;
+}
+
+.bot-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(248, 206, 85, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+}
+
+.bot-toggle-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #ffb36b;
+}
+
+.bot-toggle-text {
+  color: rgba(255, 240, 194, 0.85);
+  font-size: 13px;
+}
+
+.actions-row {
+  display: flex;
+  gap: 10px;
+}
+
+.actions-row .primary-button {
+  flex: 1;
 }
 
 .ghost-button {
@@ -513,6 +634,24 @@ async function joinRoom(roomId: string, spectate: boolean) {
   .format-button {
     padding: 16px;
     font-size: 15px;
+  }
+
+  .bot-toggle-label {
+    padding: 10px 12px;
+  }
+
+  .bot-toggle-checkbox {
+    width: 16px;
+    height: 16px;
+  }
+
+  .bot-toggle-text {
+    font-size: 12px;
+  }
+
+  .actions-row {
+    flex-direction: column;
+    gap: 8px;
   }
 }
 
