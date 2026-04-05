@@ -38,6 +38,7 @@ export class RPSRoom extends Room<RPSRoomTypes> {
   private playerSlots: string[] = [];
   private spectators = new Set<string>();
   private matchEndCloseTimer: { clear: () => void } | null = null;
+  private creatorName: string | null = null;
 
   messages = {
     [ClientMessage.MakeChoice]: (client: Client, payload: MakeChoicePayload) => {
@@ -52,6 +53,10 @@ export class RPSRoom extends Room<RPSRoomTypes> {
     this.state = new RPSRoomState();
     this.state.matchFormat = options.matchFormat ?? 3;
     this.maxClients = 10;
+    if (options.name != null && options.name !== "") {
+      this.creatorName = normalizePlayerName(options.name);
+      void this.lock();
+    }
 
     void this.setMetadata({
       roomName: options.name ?? "RPS Game",
@@ -73,6 +78,13 @@ export class RPSRoom extends Room<RPSRoomTypes> {
 
     if (this.playerSlots.length >= 2) {
       throw new Error("Room is full");
+    }
+
+    if (this.playerSlots.length === 0 && this.creatorName !== null) {
+      if (normalizePlayerName(options.name) !== this.creatorName) {
+        throw new Error("Only the room creator can join first");
+      }
+      void this.unlock();
     }
 
     const requestedName = normalizePlayerName(options.name);
