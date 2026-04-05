@@ -102,7 +102,6 @@ export class RPSRoom extends Room<RPSRoomTypes> {
       this.state.player1Id = client.sessionId;
     } else if (this.playerSlots.length === 2) {
       this.state.player2Id = client.sessionId;
-      void this.lock();
       this.startChoosing();
     }
   }

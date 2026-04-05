@@ -13,6 +13,8 @@ async function openPortal(page: Page, name: string) {
 async function createBo3Room(page: Page) {
   await page.getByTestId("create-room-btn").click();
   await page.getByTestId("bo3-btn").click();
+  await page.getByTestId("allow-bots-checkbox").uncheck();
+  await page.getByTestId("confirm-create-btn").click();
   await page.waitForURL("**/game**");
 }
 

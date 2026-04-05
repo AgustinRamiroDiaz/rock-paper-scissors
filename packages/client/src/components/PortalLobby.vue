@@ -72,12 +72,12 @@
         </div>
 
         <label class="bot-toggle-label">
-          <input v-model="allowBots" type="checkbox" class="bot-toggle-checkbox" />
+          <input v-model="allowBots" type="checkbox" class="bot-toggle-checkbox" data-testid="allow-bots-checkbox" />
           <span class="bot-toggle-text">Allow bots to join this room</span>
         </label>
 
         <div class="actions-row">
-          <button class="primary-button" @click="confirmCreateRoom">Create Room</button>
+          <button class="primary-button" data-testid="confirm-create-btn" @click="confirmCreateRoom">Create Room</button>
           <button class="ghost-button" @click="cancelCreate">Cancel</button>
         </div>
       </div>
