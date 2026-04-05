@@ -1,10 +1,10 @@
 <template>
-  <section class="panel lobby-panel">
+  <section class="panel lobby-panel" aria-label="Game lobby">
     <div class="panel-head">
       <div>
         <p class="eyebrow">Matchmaking Hub</p>
         <h2 class="panel-title">Lobby</h2>
-        <p class="lobby-presence">
+        <p class="lobby-presence" aria-live="polite">
           {{ lobbyCount }} {{ lobbyCount === 1 ? "person" : "people" }} browsing the lobby
         </p>
       </div>
@@ -17,56 +17,82 @@
           maxlength="16"
           class="player-input"
           data-testid="name-input"
+          aria-label="Player name"
           @blur="commitName"
           @keydown.enter.prevent="commitName"
         />
       </label>
     </div>
 
-    <div class="room-list">
-      <p v-if="loading" class="status">Loading rooms...</p>
-      <p v-else-if="rooms.length === 0" class="status">No rooms available. Create one.</p>
+    <div class="room-list" role="list" aria-label="Available rooms">
+      <p v-if="loading" class="status" aria-live="polite">Loading rooms...</p>
 
-      <div
-        v-for="room in rooms"
-        :key="room.roomId"
-        class="room-row"
-        :data-testid="`room-${room.roomId}`"
-      >
-        <div class="room-copy">
-          <span class="room-name">{{ room.metadata?.roomName ?? "RPS Game" }}</span>
-          <span class="room-format">{{ room.metadata?.matchFormat === 5 ? "Best of 5" : "Best of 3" }}</span>
-          <span class="room-meta">
-            <span class="room-id">{{ room.roomId }}</span>
-            <span v-if="room.metadata?.createdAt" class="room-age">{{ formatAge(room.metadata.createdAt) }}</span>
-          </span>
+      <div v-else-if="rooms.length === 0" class="empty-state">
+        <div class="empty-icons" aria-hidden="true">
+          <span class="empty-icon">🪨</span>
+          <span class="empty-icon">📄</span>
+          <span class="empty-icon">✂️</span>
         </div>
-
-        <span :class="['player-count', isRoomFull(room) ? 'full' : 'open']">
-          {{ getPlayerCount(room) }}/2 players
-          <template v-if="getSpectatorCount(room) > 0"> · {{ getSpectatorCount(room) }} spectating</template>
-        </span>
-
-        <button
-          class="row-action"
-          :class="isRoomFull(room) ? 'spectate' : 'join'"
-          :data-testid="isRoomFull(room) ? 'spectate-btn' : 'join-btn'"
-          @click="joinRoom(room.roomId, isRoomFull(room))"
-        >
-          {{ isRoomFull(room) ? "Spectate" : "Join" }}
-        </button>
+        <p class="empty-title">No battles yet</p>
+        <p class="empty-hint">Create a room and start the first match!</p>
       </div>
+
+      <TransitionGroup v-else name="room-list" tag="div" class="room-list-inner">
+        <div
+          v-for="room in rooms"
+          :key="room.roomId"
+          class="room-row"
+          :data-testid="`room-${room.roomId}`"
+          role="listitem"
+        >
+          <div class="room-copy">
+            <span class="room-name">{{ room.metadata?.roomName ?? "RPS Game" }}</span>
+            <span class="room-format">{{ room.metadata?.matchFormat === 5 ? "Best of 5" : "Best of 3" }}</span>
+            <span class="room-meta">
+              <span class="room-id">{{ room.roomId }}</span>
+              <span v-if="room.metadata?.createdAt" class="room-age">{{ formatAge(room.metadata.createdAt) }}</span>
+            </span>
+          </div>
+
+          <span :class="['player-count', isRoomFull(room) ? 'full' : 'open']">
+            {{ getPlayerCount(room) }}/2 players
+            <template v-if="getSpectatorCount(room) > 0"> · {{ getSpectatorCount(room) }} spectating</template>
+          </span>
+
+          <button
+            class="row-action"
+            :class="isRoomFull(room) ? 'spectate' : 'join'"
+            :data-testid="isRoomFull(room) ? 'spectate-btn' : 'join-btn'"
+            :aria-label="isRoomFull(room) ? `Spectate room ${room.metadata?.roomName ?? room.roomId}` : `Join room ${room.metadata?.roomName ?? room.roomId}`"
+            @click="joinRoom(room.roomId, isRoomFull(room))"
+          >
+            {{ isRoomFull(room) ? "Spectate" : "Join" }}
+          </button>
+        </div>
+      </TransitionGroup>
     </div>
 
-    <div v-if="showCreatePanel" class="overlay" @click.self="showCreatePanel = false">
+    <div v-if="showCreatePanel" class="overlay" role="dialog" aria-modal="true" aria-label="Create a new room" @click.self="showCreatePanel = false">
       <div class="create-panel">
         <p class="eyebrow">New Match</p>
         <h3 class="create-title">Choose a format</h3>
-        <div class="format-grid">
-          <button :class="['format-button', selectedFormat === MatchFormat.BestOf3 ? 'selected' : '']" data-testid="bo3-btn" @click="selectedFormat = MatchFormat.BestOf3">
+        <div class="format-grid" role="radiogroup" aria-label="Match format">
+          <button
+            :class="['format-button', selectedFormat === MatchFormat.BestOf3 ? 'selected' : '']"
+            data-testid="bo3-btn"
+            role="radio"
+            :aria-checked="selectedFormat === MatchFormat.BestOf3"
+            @click="selectedFormat = MatchFormat.BestOf3"
+          >
             Best of 3
           </button>
-          <button :class="['format-button', selectedFormat === MatchFormat.BestOf5 ? 'selected' : '']" data-testid="bo5-btn" @click="selectedFormat = MatchFormat.BestOf5">
+          <button
+            :class="['format-button', selectedFormat === MatchFormat.BestOf5 ? 'selected' : '']"
+            data-testid="bo5-btn"
+            role="radio"
+            :aria-checked="selectedFormat === MatchFormat.BestOf5"
+            @click="selectedFormat = MatchFormat.BestOf5"
+          >
             Best of 5
           </button>
         </div>
@@ -322,11 +348,25 @@ function formatAge(createdAt: number): string {
   outline: none;
 }
 
+.player-input:focus-visible {
+  text-decoration: underline;
+  text-decoration-color: var(--neon-cyan, #00f0ff);
+  text-underline-offset: 4px;
+}
+
+/* ── Room list ─────────────────────────────────── */
 .room-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-height: 320px;
+}
+
+.room-list-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
 }
 
 .status {
@@ -335,6 +375,71 @@ function formatAge(createdAt: number): string {
   font-size: 16px;
 }
 
+/* ── Room list transitions ─────────────────────── */
+.room-list-enter-active {
+  animation: room-in 0.3s ease-out;
+}
+.room-list-leave-active {
+  animation: room-out 0.25s ease-in;
+  position: absolute;
+  width: 100%;
+}
+.room-list-move {
+  transition: transform 0.3s ease;
+}
+
+@keyframes room-in {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes room-out {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(12px); }
+}
+
+/* ── Empty state ───────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: auto 0;
+  padding: 32px 16px;
+}
+
+.empty-icons {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.empty-icon {
+  font-size: 32px;
+  opacity: 0.4;
+  animation: empty-bob 3s ease-in-out infinite;
+}
+
+.empty-icon:nth-child(2) { animation-delay: 0.4s; }
+.empty-icon:nth-child(3) { animation-delay: 0.8s; }
+
+@keyframes empty-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+.empty-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(255, 240, 194, 0.8);
+}
+
+.empty-hint {
+  font-size: 14px;
+  color: rgba(255, 240, 194, 0.45);
+}
+
+/* ── Room row ──────────────────────────────────── */
 .room-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
@@ -344,6 +449,12 @@ function formatAge(createdAt: number): string {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.035);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.room-row:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.055);
 }
 
 .room-copy {
@@ -395,6 +506,7 @@ function formatAge(createdAt: number): string {
   color: var(--neon-pink, #ff2d6a);
 }
 
+/* ── Buttons ───────────────────────────────────── */
 .row-action,
 .primary-button,
 .secondary-button,
@@ -413,6 +525,15 @@ function formatAge(createdAt: number): string {
 .format-button:hover,
 .ghost-button:hover {
   transform: translateY(-1px);
+}
+
+.row-action:focus-visible,
+.primary-button:focus-visible,
+.secondary-button:focus-visible,
+.format-button:focus-visible,
+.ghost-button:focus-visible {
+  outline: 2px solid var(--neon-cyan, #00f0ff);
+  outline-offset: 2px;
 }
 
 .row-action {
@@ -453,6 +574,7 @@ function formatAge(createdAt: number): string {
   background: linear-gradient(135deg, #f4c430, #ffe18f);
 }
 
+/* ── Create dialog overlay ─────────────────────── */
 .overlay {
   position: absolute;
   inset: 0;
@@ -463,6 +585,13 @@ function formatAge(createdAt: number): string {
   border-radius: 28px;
   background: rgba(3, 7, 16, 0.7);
   backdrop-filter: blur(4px);
+  animation: overlay-in 0.2s ease-out;
+  z-index: 10;
+}
+
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .create-panel {
@@ -474,6 +603,12 @@ function formatAge(createdAt: number): string {
   border: 1px solid rgba(248, 206, 85, 0.24);
   border-radius: 24px;
   background: rgba(10, 21, 41, 0.96);
+  animation: panel-in 0.25s ease-out;
+}
+
+@keyframes panel-in {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .create-title {
@@ -542,6 +677,7 @@ function formatAge(createdAt: number): string {
   font-size: 13px;
 }
 
+/* ── Mobile ────────────────────────────────────── */
 @media (max-width: 640px) {
   .panel {
     padding: 20px;

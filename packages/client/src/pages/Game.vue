@@ -1,88 +1,135 @@
 <template>
-  <div class="game">
+  <div class="game" role="main" aria-label="Rock Paper Scissors game">
     <!-- Top bar -->
     <div class="top-bar">
       <div class="player-info left">
         <span class="player-name p1">{{ p1Name }}</span>
-        <span class="score">Score: {{ p1Score }}</span>
+        <span :class="['score', { 'score-bump': p1ScoreBumped }]" :aria-label="`Player 1 score: ${p1Score}`">
+          Score: {{ p1Score }}
+        </span>
       </div>
       <div class="round-info">
         {{ currentRound > 0 ? `Round ${currentRound} / Bo${matchFormat}` : `Bo${matchFormat}` }}
       </div>
       <div class="player-info right">
         <span class="player-name p2">{{ p2Name }}</span>
-        <span class="score">Score: {{ p2Score }}</span>
+        <span :class="['score', { 'score-bump': p2ScoreBumped }]" :aria-label="`Player 2 score: ${p2Score}`">
+          Score: {{ p2Score }}
+        </span>
       </div>
     </div>
 
     <!-- Banner -->
-    <div v-if="banner" class="banner">{{ banner }}</div>
+    <div v-if="banner" class="banner" role="status" aria-live="polite">{{ banner }}</div>
 
     <!-- Main area -->
     <div class="main-area" :data-testid="`phase-${phase}`">
+
       <!-- Waiting -->
-      <p v-if="phase === 'waiting'" class="phase-text">Waiting for opponent...</p>
+      <Transition name="phase-fade" mode="out-in">
+        <div v-if="phase === 'waiting'" key="waiting" class="phase-waiting">
+          <div class="waiting-pulse" aria-hidden="true"></div>
+          <p class="phase-text">Waiting for opponent...</p>
+        </div>
 
-      <!-- Choosing -->
-      <div v-else-if="phase === 'choosing'" class="choosing-area">
-        <p class="phase-text">
-          {{ spectating ? "Players are choosing..." : hasChosen ? "Locked in! Waiting for opponent..." : "Choose your weapon!" }}
-        </p>
-        <div v-if="!spectating" class="choices">
-          <button
-            v-for="c in choices"
-            :key="c.value"
-            class="choice-btn"
-            :class="[c.class, { dimmed: hasChosen && chosenValue !== c.value }]"
-            :disabled="hasChosen"
-            :data-testid="`choice-${c.value}`"
-            @click="makeChoice(c.value)"
-          >
-            <span class="choice-icon">{{ c.icon }}</span>
-            <span class="choice-label">{{ c.label }}</span>
-          </button>
-        </div>
-      </div>
+        <!-- Choosing -->
+        <div v-else-if="phase === 'choosing'" key="choosing" class="choosing-area">
+          <p class="phase-text" aria-live="polite">
+            {{ spectating ? "Players are choosing..." : hasChosen ? "Locked in! Waiting for opponent..." : "Choose your weapon!" }}
+          </p>
 
-      <!-- Revealing -->
-      <div v-else-if="phase === 'revealing'" class="reveal-area">
-        <div class="reveal-side">
-          <span class="reveal-name">{{ p1Name }}</span>
-          <span class="reveal-icon">{{ choiceIcon(p1Choice) }}</span>
-          <span class="reveal-label">{{ p1Choice.toUpperCase() }}</span>
-        </div>
-        <span class="vs">VS</span>
-        <div class="reveal-side">
-          <span class="reveal-name">{{ p2Name }}</span>
-          <span class="reveal-icon">{{ choiceIcon(p2Choice) }}</span>
-          <span class="reveal-label">{{ p2Choice.toUpperCase() }}</span>
-        </div>
-        <p class="round-result" :class="roundResultClass">
-          {{ roundResultText }}
-        </p>
-      </div>
+          <!-- Spectator prediction (cosmetic) -->
+          <div v-if="spectating" class="spectator-predict">
+            <p class="predict-label">Who do you think will win?</p>
+            <div class="predict-buttons">
+              <button
+                :class="['predict-btn', 'p1-predict', { selected: prediction === 'p1' }]"
+                @click="prediction = 'p1'"
+              >{{ p1Name }}</button>
+              <button
+                :class="['predict-btn', 'p2-predict', { selected: prediction === 'p2' }]"
+                @click="prediction = 'p2'"
+              >{{ p2Name }}</button>
+            </div>
+          </div>
 
-      <!-- Match end -->
-      <div v-else-if="phase === 'match_end'" class="match-end" data-testid="match-end">
-        <h2 :class="['match-result', matchResultClass]" data-testid="match-result">{{ matchResultText }}</h2>
-        <p class="final-score" data-testid="final-score">{{ p1Name }} {{ p1Score }} - {{ p2Score }} {{ p2Name }}</p>
-        <div v-if="!spectating" class="match-actions">
-          <button class="btn btn-dark" @click="leave">LOBBY</button>
+          <div v-if="!spectating" class="choices">
+            <button
+              v-for="(c, i) in choices"
+              :key="c.value"
+              :class="['choice-btn', c.class, {
+                dimmed: hasChosen && chosenValue !== c.value,
+                chosen: hasChosen && chosenValue === c.value,
+              }]"
+              :disabled="hasChosen"
+              :data-testid="`choice-${c.value}`"
+              :style="{ animationDelay: `${i * 80}ms` }"
+              :aria-label="`Choose ${c.label}`"
+              :aria-pressed="chosenValue === c.value"
+              @click="makeChoice(c.value)"
+            >
+              <span class="choice-icon" aria-hidden="true">{{ c.icon }}</span>
+              <span class="choice-label">{{ c.label }}</span>
+            </button>
+          </div>
         </div>
-      </div>
+
+        <!-- Revealing -->
+        <div v-else-if="phase === 'revealing'" key="revealing" class="reveal-area">
+          <div :class="['reveal-side', revealWinnerSide === 'p1' ? 'winner' : revealWinnerSide === 'p2' ? 'loser' : '']">
+            <span class="reveal-name">{{ p1Name }}</span>
+            <div class="reveal-card">
+              <span class="reveal-icon">{{ choiceIcon(p1Choice) }}</span>
+            </div>
+            <span class="reveal-label">{{ p1Choice.toUpperCase() }}</span>
+          </div>
+          <span class="vs" aria-hidden="true">VS</span>
+          <div :class="['reveal-side', revealWinnerSide === 'p2' ? 'winner' : revealWinnerSide === 'p1' ? 'loser' : '']">
+            <span class="reveal-name">{{ p2Name }}</span>
+            <div class="reveal-card">
+              <span class="reveal-icon">{{ choiceIcon(p2Choice) }}</span>
+            </div>
+            <span class="reveal-label">{{ p2Choice.toUpperCase() }}</span>
+          </div>
+          <p :class="['round-result', roundResultClass]" role="status" aria-live="assertive">
+            {{ roundResultText }}
+          </p>
+        </div>
+
+        <!-- Match end -->
+        <div v-else-if="phase === 'match_end'" key="match_end" class="match-end" data-testid="match-end">
+          <div v-if="matchResultClass === 'win'" class="victory-burst" aria-hidden="true">
+            <span v-for="n in 12" :key="n" class="burst-ray" :style="{ '--ray-angle': `${n * 30}deg` }"></span>
+          </div>
+          <h2 :class="['match-result', matchResultClass]" data-testid="match-result" role="status" aria-live="assertive">
+            {{ matchResultText }}
+          </h2>
+          <p class="final-score" data-testid="final-score">{{ p1Name }} {{ p1Score }} - {{ p2Score }} {{ p2Name }}</p>
+
+          <div class="match-stats">
+            <span class="stat">{{ currentRound }} rounds played</span>
+          </div>
+
+          <div v-if="!spectating" class="match-actions">
+            <button class="btn btn-lobby" @click="leave">BACK TO LOBBY</button>
+          </div>
+        </div>
+      </Transition>
     </div>
 
     <!-- Bottom bar -->
     <div class="bottom-bar">
-      <button class="btn btn-danger btn-small" @click="leave">LEAVE</button>
+      <button class="btn btn-danger btn-small" @click="leave" aria-label="Leave game">LEAVE</button>
       <span v-if="spectating" class="spectating-label">SPECTATING</span>
-      <span v-if="spectatorCount > 0" class="spectator-count">Spectators: {{ spectatorCount }}</span>
+      <span v-if="spectatorCount > 0" class="spectator-count">
+        <span aria-hidden="true">👁</span> {{ spectatorCount }} watching
+      </span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { Callbacks } from "@colyseus/sdk";
 import { network } from "../network/client";
@@ -127,6 +174,9 @@ const hasChosen = ref(false);
 const chosenValue = ref<Choice | "">("");
 const lastRoundResult = ref<RoundOutcome>("");
 const matchCloseCountdown = ref<number | null>(null);
+const prediction = ref<"p1" | "p2" | null>(null);
+const p1ScoreBumped = ref(false);
+const p2ScoreBumped = ref(false);
 let matchCloseInterval: number | null = null;
 
 const choices = [
@@ -139,9 +189,24 @@ function choiceIcon(val: Choice | "") {
   return choices.find((c) => c.value === val)?.icon ?? "?";
 }
 
+// Score bump animation triggers
+watch(p1Score, () => {
+  p1ScoreBumped.value = true;
+  setTimeout(() => { p1ScoreBumped.value = false; }, 400);
+});
+watch(p2Score, () => {
+  p2ScoreBumped.value = true;
+  setTimeout(() => { p2ScoreBumped.value = false; }, 400);
+});
+
 const room = network.getRoom();
 const myId = room?.sessionId ?? "";
 const getRoomState = () => room?.state as RoomStateView | undefined;
+
+const revealWinnerSide = computed(() => {
+  if (lastRoundResult.value === "draw") return "";
+  return lastRoundResult.value === "player1" ? "p1" : "p2";
+});
 
 const roundResultText = computed(() => {
   if (lastRoundResult.value === "draw") return "DRAW!";
@@ -327,6 +392,56 @@ function updatePlayers(state: RoomStateView) {
 </script>
 
 <style scoped>
+/* ── Phase transitions ─────────────────────────── */
+.phase-fade-enter-active {
+  animation: phase-in 0.35s ease-out;
+}
+.phase-fade-leave-active {
+  animation: phase-out 0.2s ease-in;
+}
+
+@keyframes phase-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes phase-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(-8px) scale(0.98); }
+}
+
+/* ── Waiting pulse ─────────────────────────────── */
+.phase-waiting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.waiting-pulse {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--neon-amber, #ffd426) 0%, transparent 70%);
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+
+@keyframes pulse-ring {
+  0%, 100% { transform: scale(0.8); opacity: 0.4; }
+  50%      { transform: scale(1.2); opacity: 0.8; }
+}
+
+/* ── Score bump ────────────────────────────────── */
+.score-bump {
+  animation: bump 0.4s ease-out;
+}
+
+@keyframes bump {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.35); color: var(--neon-green, #00ff88); }
+  100% { transform: scale(1); }
+}
+
+/* ── Game layout ───────────────────────────────── */
 .game {
   width: 100%;
   max-width: 960px;
@@ -340,7 +455,6 @@ function updatePlayers(state: RoomStateView) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 0;
   background: #16213e;
   border-radius: 0 0 12px 12px;
   padding: 12px 24px;
@@ -351,16 +465,18 @@ function updatePlayers(state: RoomStateView) {
 .player-name { font-weight: bold; font-size: 18px; }
 .player-name.p1 { color: var(--neon-pink, #ff2d6a); }
 .player-name.p2 { color: var(--neon-cyan, #00f0ff); }
-.score { font-size: 14px; color: #ccc; }
+.score { font-size: 14px; color: #ccc; display: inline-block; }
 .round-info { font-size: 20px; font-weight: bold; }
 
 .banner {
   text-align: center;
-  background: #333;
+  background: rgba(255, 212, 38, 0.1);
+  border: 1px solid rgba(255, 212, 38, 0.2);
   color: var(--neon-amber, #ffd426);
-  padding: 8px;
+  padding: 8px 16px;
   margin-top: 8px;
   border-radius: 8px;
+  animation: phase-in 0.3s ease-out;
 }
 
 .main-area {
@@ -379,6 +495,64 @@ function updatePlayers(state: RoomStateView) {
   text-align: center;
 }
 
+/* ── Spectator prediction ──────────────────────── */
+.spectator-predict {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 20px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.predict-label {
+  font-size: 13px;
+  color: rgba(255, 240, 194, 0.6);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.predict-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.predict-btn {
+  padding: 8px 20px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #ccc;
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.predict-btn.p1-predict.selected {
+  border-color: var(--neon-pink, #ff2d6a);
+  color: var(--neon-pink, #ff2d6a);
+  background: rgba(255, 45, 106, 0.1);
+  box-shadow: 0 0 16px rgba(255, 45, 106, 0.2);
+}
+
+.predict-btn.p2-predict.selected {
+  border-color: var(--neon-cyan, #00f0ff);
+  color: var(--neon-cyan, #00f0ff);
+  background: rgba(0, 240, 255, 0.1);
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.2);
+}
+
+.predict-btn:not(.selected):hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+/* ── Choice buttons ────────────────────────────── */
 .choices {
   display: flex;
   gap: 32px;
@@ -398,18 +572,40 @@ function updatePlayers(state: RoomStateView) {
   font-weight: bold;
   font-size: 14px;
   color: #fff;
-  transition: all 0.2s;
+  transition: all 0.25s ease;
+  animation: choice-enter 0.35s ease-out both;
+}
+
+@keyframes choice-enter {
+  from { opacity: 0; transform: translateY(20px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .choice-btn:disabled { cursor: default; }
-.choice-btn.dimmed { opacity: 0.3; }
+.choice-btn.dimmed {
+  opacity: 0.15;
+  transform: scale(0.9);
+  filter: grayscale(0.6);
+}
+.choice-btn.chosen {
+  border-color: #fff;
+  animation: chosen-pulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.2);
+}
+
+@keyframes chosen-pulse {
+  0%, 100% { box-shadow: 0 0 24px rgba(255, 255, 255, 0.15); }
+  50%      { box-shadow: 0 0 40px rgba(255, 255, 255, 0.35); }
+}
+
 .choice-rock { background: #e94560; }
 .choice-paper { background: #533483; }
 .choice-scissors { background: #0f3460; }
-.choice-btn:not(:disabled):hover { border-color: #fff; transform: scale(1.05); }
+.choice-btn:not(:disabled):hover { border-color: #fff; transform: scale(1.08); }
 .choice-icon { font-size: 48px; }
 .choice-label { font-size: 14px; }
 
+/* ── Reveal ────────────────────────────────────── */
 .reveal-area {
   display: flex;
   align-items: center;
@@ -422,46 +618,194 @@ function updatePlayers(state: RoomStateView) {
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  animation: reveal-slide-in 0.4s ease-out both;
+  transition: all 0.4s ease;
+}
+
+.reveal-side:first-child { animation-name: reveal-slide-left; }
+.reveal-side:last-of-type { animation-name: reveal-slide-right; }
+
+@keyframes reveal-slide-left {
+  from { opacity: 0; transform: translateX(-40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes reveal-slide-right {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.reveal-side.winner {
+  transform: scale(1.1);
+}
+.reveal-side.winner .reveal-card {
+  box-shadow: 0 0 32px rgba(0, 255, 136, 0.3);
+  border-color: var(--neon-green, #00ff88);
+}
+
+.reveal-side.loser {
+  opacity: 0.55;
+  transform: scale(0.92);
+}
+
+.reveal-card {
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  animation: card-flip 0.5s ease-out;
+  transition: all 0.4s ease;
+}
+
+@keyframes card-flip {
+  0%   { transform: rotateY(90deg); opacity: 0; }
+  50%  { transform: rotateY(-5deg); opacity: 1; }
+  100% { transform: rotateY(0); }
 }
 
 .reveal-name { font-size: 16px; color: #8899aa; }
-.reveal-icon { font-size: 64px; }
+.reveal-icon { font-size: 48px; }
 .reveal-label { font-size: 18px; font-weight: bold; }
-.vs { font-size: 48px; font-weight: bold; color: #fff; }
+.vs {
+  font-size: 48px;
+  font-weight: bold;
+  color: #fff;
+  animation: vs-pop 0.3s ease-out 0.2s both;
+}
+
+@keyframes vs-pop {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 1; transform: scale(1); }
+}
 
 .round-result {
   font-size: 28px;
   font-weight: bold;
   margin-top: 16px;
+  animation: result-appear 0.4s ease-out 0.3s both;
 }
 
-.round-result.win { color: var(--neon-green, #00ff88); }
-.round-result.lose { color: var(--neon-pink, #ff2d6a); }
-.round-result.draw { color: var(--neon-amber, #ffd426); }
+@keyframes result-appear {
+  from { opacity: 0; transform: translateY(10px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
 
-.match-end { text-align: center; }
+.round-result.win {
+  color: var(--neon-green, #00ff88);
+  text-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+}
+.round-result.lose {
+  color: var(--neon-pink, #ff2d6a);
+  text-shadow: 0 0 20px rgba(255, 45, 106, 0.4);
+}
+.round-result.draw {
+  color: var(--neon-amber, #ffd426);
+  text-shadow: 0 0 20px rgba(255, 212, 38, 0.3);
+}
+
+/* ── Match end ─────────────────────────────────── */
+.match-end {
+  text-align: center;
+  position: relative;
+}
+
+.victory-burst {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.burst-ray {
+  position: absolute;
+  width: 3px;
+  height: 120px;
+  background: linear-gradient(to top, transparent, var(--neon-green, #00ff88));
+  transform-origin: bottom center;
+  transform: rotate(var(--ray-angle));
+  opacity: 0;
+  animation: ray-burst 1.2s ease-out forwards;
+}
+
+@keyframes ray-burst {
+  0%   { opacity: 0.8; height: 0; }
+  50%  { opacity: 0.6; height: 120px; }
+  100% { opacity: 0; height: 180px; }
+}
 
 .match-result {
   font-size: 48px;
   margin-bottom: 16px;
   font-family: 'Orbitron', sans-serif;
   font-weight: 900;
+  animation: match-result-in 0.6s ease-out;
 }
 
-.match-result.win { color: var(--neon-green, #00ff88); text-shadow: 0 0 30px rgba(0, 255, 136, 0.5); }
-.match-result.lose { color: var(--neon-pink, #ff2d6a); text-shadow: 0 0 30px rgba(255, 45, 106, 0.5); }
+@keyframes match-result-in {
+  0%   { opacity: 0; transform: scale(0.5); filter: blur(8px); }
+  60%  { opacity: 1; transform: scale(1.08); filter: blur(0); }
+  100% { transform: scale(1); }
+}
+
+.match-result.win {
+  color: var(--neon-green, #00ff88);
+  text-shadow: 0 0 30px rgba(0, 255, 136, 0.5), 0 0 60px rgba(0, 255, 136, 0.2);
+}
+.match-result.lose {
+  color: var(--neon-pink, #ff2d6a);
+  text-shadow: 0 0 30px rgba(255, 45, 106, 0.5);
+  animation-name: match-defeat-in;
+}
+
+@keyframes match-defeat-in {
+  0%   { opacity: 0; transform: translateY(-20px); filter: blur(4px); }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
 
 .final-score {
   font-size: 24px;
+  margin-bottom: 12px;
+  animation: phase-in 0.4s ease-out 0.2s both;
+}
+
+.match-stats {
   margin-bottom: 24px;
+  animation: phase-in 0.4s ease-out 0.3s both;
+}
+
+.stat {
+  font-size: 14px;
+  color: rgba(255, 240, 194, 0.5);
 }
 
 .match-actions {
   display: flex;
   gap: 16px;
   justify-content: center;
+  animation: phase-in 0.4s ease-out 0.4s both;
 }
 
+.btn-lobby {
+  background: linear-gradient(135deg, #0f3460, #16213e);
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  padding: 12px 32px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.btn-lobby:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+/* ── Bottom bar ────────────────────────────────── */
 .bottom-bar {
   display: flex;
   align-items: center;
@@ -472,6 +816,7 @@ function updatePlayers(state: RoomStateView) {
 .spectating-label { color: var(--neon-amber, #ffd426); font-weight: bold; margin-left: auto; }
 .spectator-count { color: #8899aa; margin-left: auto; }
 
+/* ── Buttons ───────────────────────────────────── */
 .btn {
   padding: 10px 24px;
   border: none;
@@ -480,21 +825,23 @@ function updatePlayers(state: RoomStateView) {
   font-family: monospace;
   font-weight: bold;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: all 0.2s ease;
 }
 
 .btn:hover { opacity: 0.8; }
 .btn:disabled { opacity: 0.5; cursor: default; }
+.btn:focus-visible {
+  outline: 2px solid var(--neon-cyan, #00f0ff);
+  outline-offset: 2px;
+}
 .btn-green { background: var(--neon-green, #00ff88); color: #000; }
 .btn-dark { background: #0f3460; color: #fff; }
 .btn-danger { background: var(--neon-pink, #ff2d6a); color: #fff; }
 .btn-small { padding: 6px 16px; font-size: 13px; }
 
-/* Mobile styles */
+/* ── Mobile ────────────────────────────────────── */
 @media (max-width: 640px) {
-  .game {
-    padding: 0 12px;
-  }
+  .game { padding: 0 12px; }
 
   .top-bar {
     flex-wrap: wrap;
@@ -504,22 +851,10 @@ function updatePlayers(state: RoomStateView) {
     border-radius: 0 0 8px 8px;
   }
 
-  .player-info {
-    flex: 1;
-    min-width: 100px;
-  }
-
-  .player-info.right {
-    text-align: right;
-  }
-
-  .player-name {
-    font-size: 14px;
-  }
-
-  .score {
-    font-size: 12px;
-  }
+  .player-info { flex: 1; min-width: 100px; }
+  .player-info.right { text-align: right; }
+  .player-name { font-size: 14px; }
+  .score { font-size: 12px; }
 
   .round-info {
     font-size: 16px;
@@ -531,15 +866,8 @@ function updatePlayers(state: RoomStateView) {
     margin-bottom: 4px;
   }
 
-  .main-area {
-    padding: 24px 0;
-    gap: 16px;
-  }
-
-  .phase-text {
-    font-size: 18px;
-    padding: 0 12px;
-  }
+  .main-area { padding: 24px 0; gap: 16px; }
+  .phase-text { font-size: 18px; padding: 0 12px; }
 
   .choices {
     gap: 12px;
@@ -555,13 +883,8 @@ function updatePlayers(state: RoomStateView) {
     min-width: 90px;
   }
 
-  .choice-icon {
-    font-size: 36px;
-  }
-
-  .choice-label {
-    font-size: 11px;
-  }
+  .choice-icon { font-size: 36px; }
+  .choice-label { font-size: 11px; }
 
   .reveal-area {
     flex-direction: column;
@@ -576,35 +899,23 @@ function updatePlayers(state: RoomStateView) {
     border-radius: 12px;
   }
 
-  .reveal-icon {
-    font-size: 48px;
+  .reveal-card {
+    width: 80px;
+    height: 80px;
   }
 
-  .vs {
-    font-size: 28px;
-    padding: 8px 0;
-  }
-
-  .round-result {
-    font-size: 20px;
-  }
-
-  .match-result {
-    font-size: 32px;
-  }
-
-  .final-score {
-    font-size: 18px;
-  }
+  .reveal-icon { font-size: 40px; }
+  .vs { font-size: 28px; padding: 8px 0; }
+  .round-result { font-size: 20px; }
+  .match-result { font-size: 32px; }
+  .final-score { font-size: 18px; }
 
   .match-actions {
     flex-direction: column;
     width: 100%;
   }
 
-  .match-actions .btn {
-    width: 100%;
-  }
+  .match-actions .btn { width: 100%; }
 
   .bottom-bar {
     flex-wrap: wrap;
@@ -622,20 +933,9 @@ function updatePlayers(state: RoomStateView) {
 }
 
 @media (max-width: 400px) {
-  .choice-btn {
-    padding: 12px 14px;
-  }
-
-  .choice-icon {
-    font-size: 28px;
-  }
-
-  .choice-label {
-    font-size: 10px;
-  }
-
-  .match-result {
-    font-size: 26px;
-  }
+  .choice-btn { padding: 12px 14px; }
+  .choice-icon { font-size: 28px; }
+  .choice-label { font-size: 10px; }
+  .match-result { font-size: 26px; }
 }
 </style>

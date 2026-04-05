@@ -1,6 +1,6 @@
 <template>
-  <main class="portal">
-    <section class="hero">
+  <main class="portal" role="main">
+    <section class="hero" aria-label="Welcome">
       <p class="hero-kicker">Realtime multiplayer</p>
       <h1 class="hero-title">Rock Paper Scissors</h1>
       <p class="hero-copy">
@@ -54,11 +54,18 @@ const playerName = ref(getPlayerName());
     0deg,
     transparent,
     transparent 2px,
-    rgba(0, 240, 255, 0.02) 2px,
-    rgba(0, 240, 255, 0.02) 4px
+    rgba(0, 240, 255, 0.015) 2px,
+    rgba(0, 240, 255, 0.015) 4px
   );
+  background-size: 100% 4px;
   pointer-events: none;
   border-radius: 30px;
+  animation: scanline-scroll 8s linear infinite;
+}
+
+@keyframes scanline-scroll {
+  from { background-position: 0 0; }
+  to   { background-position: 0 40px; }
 }
 
 .hero-kicker {
