@@ -84,6 +84,11 @@ export abstract class BaseBot {
       this.knownRooms.delete(roomId);
       void this.handleRoomRemoved(roomId);
     });
+
+    this.lobbyRoom.onLeave((code: number) => {
+      this.log(`lobby connection lost (code=${code}), exiting`);
+      process.exit(1);
+    });
   }
 
   protected async handleRoomsUpdate(rooms: RoomAvailable<RPSRoomMetadata>[]) {
