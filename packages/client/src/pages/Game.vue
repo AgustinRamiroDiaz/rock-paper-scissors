@@ -76,24 +76,26 @@
 
         <!-- Revealing -->
         <div v-else-if="phase === 'revealing'" key="revealing" class="reveal-area">
-          <div :class="['reveal-side', revealWinnerSide === 'p1' ? 'winner' : revealWinnerSide === 'p2' ? 'loser' : '']">
-            <span class="reveal-name">{{ p1Name }}</span>
-            <div class="reveal-card">
-              <span class="reveal-icon">{{ choiceIcon(p1Choice) }}</span>
-            </div>
-            <span class="reveal-label">{{ p1Choice.toUpperCase() }}</span>
-          </div>
-          <span class="vs" aria-hidden="true">VS</span>
-          <div :class="['reveal-side', revealWinnerSide === 'p2' ? 'winner' : revealWinnerSide === 'p1' ? 'loser' : '']">
-            <span class="reveal-name">{{ p2Name }}</span>
-            <div class="reveal-card">
-              <span class="reveal-icon">{{ choiceIcon(p2Choice) }}</span>
-            </div>
-            <span class="reveal-label">{{ p2Choice.toUpperCase() }}</span>
-          </div>
           <p :class="['round-result', roundResultClass]" role="status" aria-live="assertive">
             {{ roundResultText }}
           </p>
+          <div class="reveal-cards">
+            <div :class="['reveal-side', revealWinnerSide === 'p1' ? 'winner' : revealWinnerSide === 'p2' ? 'loser' : '']">
+              <span class="reveal-name">{{ p1Name }}</span>
+              <div class="reveal-card">
+                <span class="reveal-icon">{{ choiceIcon(p1Choice) }}</span>
+              </div>
+              <span class="reveal-label">{{ p1Choice.toUpperCase() }}</span>
+            </div>
+            <span class="vs" aria-hidden="true">VS</span>
+            <div :class="['reveal-side', revealWinnerSide === 'p2' ? 'winner' : revealWinnerSide === 'p1' ? 'loser' : '']">
+              <span class="reveal-name">{{ p2Name }}</span>
+              <div class="reveal-card">
+                <span class="reveal-icon">{{ choiceIcon(p2Choice) }}</span>
+              </div>
+              <span class="reveal-label">{{ p2Choice.toUpperCase() }}</span>
+            </div>
+          </div>
         </div>
 
         <!-- Match end -->
@@ -608,9 +610,16 @@ function updatePlayers(state: RoomStateView) {
 /* ── Reveal ────────────────────────────────────── */
 .reveal-area {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  text-align: center;
+}
+
+.reveal-cards {
+  display: flex;
   align-items: center;
   gap: 48px;
-  text-align: center;
 }
 
 .reveal-side {
@@ -684,8 +693,7 @@ function updatePlayers(state: RoomStateView) {
 .round-result {
   font-size: 28px;
   font-weight: bold;
-  margin-top: 16px;
-  animation: result-appear 0.4s ease-out 0.3s both;
+  animation: result-appear 0.4s ease-out both;
 }
 
 @keyframes result-appear {
@@ -886,7 +894,7 @@ function updatePlayers(state: RoomStateView) {
   .choice-icon { font-size: 36px; }
   .choice-label { font-size: 11px; }
 
-  .reveal-area {
+  .reveal-cards {
     flex-direction: column;
     gap: 24px;
     width: 100%;
