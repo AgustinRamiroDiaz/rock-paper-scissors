@@ -119,9 +119,6 @@ export class RPSRoom extends Room<RPSRoomTypes> {
       this.state.player1Id = client.sessionId;
       this.matchmakingTimer = this.clock.setTimeout(() => {
         this.matchmakingTimer = null;
-        for (const c of this.clients) {
-          c.leave(4000);
-        }
         void this.disconnect();
       }, this.matchmakingTimeoutMs);
     } else if (this.playerSlots.length === 2) {
