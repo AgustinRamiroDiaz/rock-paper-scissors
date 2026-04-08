@@ -30,3 +30,4 @@ export const CHOICE_BEATS: Record<Choice, Choice> = {
 
 export const REVEAL_DURATION_MS = 2000;
 export const RECONNECT_TIMEOUT_MS = 30000;
+export const MATCHMAKING_TIMEOUT_MS = 5 * 60 * 1000;

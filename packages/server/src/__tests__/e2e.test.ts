@@ -216,6 +216,45 @@ describe("RPS", () => {
     expect(room.state.players.has(spectator.sessionId)).toBe(false);
   }, 30000);
 
+  test("room closes when second player doesn't join before matchmaking timeout", async () => {
+    const room = await colyseus.createRoom<RPSRoom>("rps", {
+      matchFormat: MatchFormat.BestOf3,
+      matchmakingTimeoutMs: 1000,
+    });
+
+    const client1 = await colyseus.connectTo(room, { name: "Lonely" });
+
+    expect(room.state.phase).toBe(RoomPhase.WaitingForPlayers);
+
+    const disconnected = new Promise<boolean>((resolve) => {
+      client1.onLeave(() => { resolve(true); });
+      setTimeout(() => { resolve(false); }, 5_000);
+    });
+
+    const result = await disconnected;
+    expect(result).toBe(true);
+  }, 10_000);
+
+  test("matchmaking timer is cleared when second player joins in time", async () => {
+    const room = await colyseus.createRoom<RPSRoom>("rps", {
+      matchFormat: MatchFormat.BestOf3,
+      matchmakingTimeoutMs: 2000,
+    });
+
+    const client1 = await colyseus.connectTo(room, { name: "Patient1" });
+    const client2 = await colyseus.connectTo(room, { name: "Patient2" });
+
+    await waitForPhase(room, RoomPhase.Choosing);
+
+    // Wait past the matchmaking timeout to confirm it was cleared
+    await new Promise((resolve) => { setTimeout(resolve, 3000); });
+
+    // Room should still be active and in Choosing phase
+    expect(room.state.phase).toBe(RoomPhase.Choosing);
+    expect(room.state.players.has(client1.sessionId)).toBe(true);
+    expect(room.state.players.has(client2.sessionId)).toBe(true);
+  }, 10_000);
+
   test("draw rounds don't award points", async () => {
     const room = await colyseus.createRoom<RPSRoom>("rps", {
       matchFormat: MatchFormat.BestOf3,

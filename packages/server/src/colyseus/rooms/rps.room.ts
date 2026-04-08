@@ -6,6 +6,7 @@ import {
   CHOICE_BEATS,
   REVEAL_DURATION_MS,
   RECONNECT_TIMEOUT_MS,
+  MATCHMAKING_TIMEOUT_MS,
   ClientMessage,
   ServerMessage,
   RoundResult,
@@ -38,6 +39,8 @@ export class RPSRoom extends Room<RPSRoomTypes> {
   private playerSlots: string[] = [];
   private spectators = new Set<string>();
   private matchEndCloseTimer: { clear: () => void } | null = null;
+  private matchmakingTimer: { clear: () => void } | null = null;
+  private matchmakingTimeoutMs = MATCHMAKING_TIMEOUT_MS;
   private creatorName: string | null = null;
 
   messages = {
@@ -49,9 +52,12 @@ export class RPSRoom extends Room<RPSRoomTypes> {
     },
   };
 
-  onCreate(options: { name?: string; matchFormat?: number; allowBots?: boolean }) {
+  onCreate(options: { name?: string; matchFormat?: number; allowBots?: boolean; matchmakingTimeoutMs?: number }) {
     this.state = new RPSRoomState();
     this.state.matchFormat = options.matchFormat ?? 3;
+    if (options.matchmakingTimeoutMs != null) {
+      this.matchmakingTimeoutMs = options.matchmakingTimeoutMs;
+    }
     this.maxClients = 10;
     if (options.name != null && options.name !== "") {
       this.creatorName = normalizePlayerName(options.name);
@@ -111,7 +117,16 @@ export class RPSRoom extends Room<RPSRoomTypes> {
 
     if (this.playerSlots.length === 1) {
       this.state.player1Id = client.sessionId;
+      this.matchmakingTimer = this.clock.setTimeout(() => {
+        this.matchmakingTimer = null;
+        for (const c of this.clients) {
+          c.leave(4000);
+        }
+        void this.disconnect();
+      }, this.matchmakingTimeoutMs);
     } else if (this.playerSlots.length === 2) {
+      this.matchmakingTimer?.clear();
+      this.matchmakingTimer = null;
       this.state.player2Id = client.sessionId;
       this.startChoosing();
     }
@@ -159,6 +174,8 @@ export class RPSRoom extends Room<RPSRoomTypes> {
   onDispose() {
     this.matchEndCloseTimer?.clear();
     this.matchEndCloseTimer = null;
+    this.matchmakingTimer?.clear();
+    this.matchmakingTimer = null;
   }
 
   private handlePermanentLeave(sessionId: string) {
