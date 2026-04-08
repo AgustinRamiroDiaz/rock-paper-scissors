@@ -2,6 +2,11 @@ services:
   postgres:
     image: postgres:18.3-alpine3.23
     container_name: rps-postgres
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -22,6 +27,11 @@ services:
       context: .
       dockerfile: Dockerfile.server
       target: dev
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/postgres
       PORT: "2567"
@@ -40,6 +50,11 @@ services:
       target: dev
       args:
         VITE_SERVER_HOST: ${VITE_SERVER_HOST:-rps-server.agustinramirodiaz.dev}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     depends_on:
       server:
         condition: service_healthy
@@ -55,6 +70,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.bots
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       SERVER_URL: "server:2567"
       NUM_CREATORS: "2"
